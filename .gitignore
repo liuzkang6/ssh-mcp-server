@@ -4,6 +4,8 @@ package-lock.json
 
 # 构建输出
 build/
+packages/server/dist/
+packages/cli/dist/
 
 # 操作系统文件
 .DS_Store

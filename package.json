@@ -1,46 +1,60 @@
 {
-  "name": "@fangjunjie/ssh-mcp-server",
-  "version": "1.8.3",
-  "description": "SSH-based MCP Server (基于 SSH 的 MCP 服务器)",
-  "main": "build/index.js",
+  "name": "opsgate",
+  "version": "2.0.0",
+  "description": "opsgate — AI Agent 增强的 DevOps 中台(SSH MCP + Web UI + REST API + RBAC + 审计 + Docker)",
   "type": "module",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/classfang/ssh-mcp-server.git"
+    "url": "git+https://github.com/liuzkang6/opsgate.git"
   },
   "bugs": {
-    "url": "https://github.com/classfang/ssh-mcp-server/issues"
+    "url": "https://github.com/liuzkang6/opsgate/issues"
   },
-  "homepage": "https://github.com/classfang/ssh-mcp-server#readme",
+  "homepage": "https://github.com/liuzkang6/opsgate#readme",
+  "workspaces": [
+    "packages/*"
+  ],
   "bin": {
-    "ssh-mcp-server": "build/index.js"
+    "opsgate": "./packages/cli/dist/index.js"
   },
   "scripts": {
     "test": "node scripts/run-tests.js",
     "test:watch": "node --test --watch test/**/*.test.js",
     "build": "node scripts/build.js",
-    "prepublishOnly": "npm run build"
+    "build:server": "npm run build -w @opsgate/server",
+    "build:cli": "npm run build -w @opsgate/cli",
+    "build:web": "npm run build -w @opsgate/web",
+    "dev:server": "npm run dev -w @opsgate/server",
+    "dev:web": "npm run dev -w @opsgate/web",
+    "start": "node packages/server/dist/index.js --enable-web",
+    "opsgate": "node packages/cli/dist/index.js",
+    "prepublishOnly": "npm run build",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "node --import tsx/esm packages/server/src/db/migrate.ts",
+    "db:seed": "node --import tsx/esm scripts/seed.ts"
   },
   "keywords": [
+    "opsgate",
     "ssh",
     "mcp",
     "server",
-    "cli"
+    "cli",
+    "devops",
+    "ai-agent",
+    "monorepo",
+    "rbac",
+    "audit"
   ],
-  "author": "Junki",
+  "author": "liuzkang6",
   "license": "ISC",
-  "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.27.0",
-    "socks": "^2.8.7",
-    "ssh2": "^1.17.0",
-    "zod": "^4.3.6"
-  },
   "devDependencies": {
-    "@types/node": "^22.13.10",
-    "@types/ssh2": "^1.15.5",
+    "drizzle-kit": "^0.30.0",
+    "tsx": "^4.19.0",
     "typescript": "^5.8.2"
   },
   "files": [
-    "build/**/*"
+    "packages/server/dist/**/*",
+    "packages/cli/dist/**/*",
+    "web-dist/**/*"
   ]
 }

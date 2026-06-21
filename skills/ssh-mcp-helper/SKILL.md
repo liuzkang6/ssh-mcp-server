@@ -1,9 +1,9 @@
 ---
-name: ssh-mcp-helper
-description: Use when 用户希望安装、配置或新增 ssh-mcp-server 的 MCP 连接（如「帮我装一下 ssh-mcp-server」「给 Cursor/Claude Code 配置 SSH MCP」「在已有 MCP 里加一台远程主机」「ssh-mcp-server 的 mcp.json 怎么写」）。技能通过逐步问答收集主机、认证、传输模式、命令限制等参数，并把生成的 mcpServers JSON 片段写入对应客户端的配置文件。
+name: opsgate-helper
+description: Use when 用户希望安装、配置或新增 opsgate（原 ssh-mcp-server）的 MCP 连接（如「帮我装一下 opsgate」「给 Cursor/Claude Code 配置 SSH MCP」「在已有 MCP 里加一台远程主机」「opsgate 的 mcp.json 怎么写」）。技能通过逐步问答收集主机、认证、传输模式、命令限制等参数，并把生成的 mcpServers JSON 片段写入对应客户端的配置文件。
 ---
 
-# ssh-mcp-helper
+# opsgate-helper（原 ssh-mcp-helper）
 
 ## 概述
 
@@ -13,15 +13,15 @@ description: Use when 用户希望安装、配置或新增 ssh-mcp-server 的 MC
 
 ## 何时使用
 
-- 用户明确要安装/配置/新增 ssh-mcp-server
+- 用户明确要安装/配置/新增 opsgate（原 ssh-mcp-server）
 - 用户提到为 Cursor / Claude Code / Cline / Continue 等客户端添加 SSH MCP
 - 用户希望在已有 `mcpServers` 中追加一台 SSH 主机
-- 用户问「ssh-mcp-server 的 mcp.json 怎么写」
+- 用户问「opsgate 的 mcp.json 怎么写」
 
 ## 何时不使用
 
-- 用户要修改 ssh-mcp-server 源码 → 直接编辑代码，不进入向导
-- 用户只是想跑某条 SSH 命令 → 直接调用已存在的 ssh-mcp-server 工具
+- 用户要修改 opsgate 源码 → 直接编辑代码，不进入向导
+- 用户只是想跑某条 SSH 命令 → 直接调用已存在的 opsgate MCP 工具（v2 也提供 `opsgate` CLI）
 - 用户在问 SSH 协议本身的概念 → 解释即可，无需走流程
 
 ## 工作流程
@@ -136,11 +136,11 @@ digraph ssh_mcp_helper {
 ```json
 {
   "mcpServers": {
-    "ssh-mcp-server": {
+    "opsgate": {
       "command": "npx",
       "args": [
         "-y",
-        "@fangjunjie/ssh-mcp-server",
+        "opsgate",
         "--host", "192.168.1.1",
         "--port", "22",
         "--username", "root",
@@ -157,10 +157,12 @@ digraph ssh_mcp_helper {
 ```json
 {
   "mcpServers": {
-    "ssh-mcp-server": {
+    "opsgate": {
       "command": "npx",
-      "args": ["-y", "@fangjunjie/ssh-mcp-server", "--config-file", "/abs/path/ssh-config.json"]
+      "args": ["-y", "opsgate", "--config-file", "/abs/path/ssh-config.json"]
     }
   }
 }
 ```
+
+> 💡 **v2 进阶**:除了 MCP 集成,opsgate 还提供 Web UI(`http://localhost:3000`)和 `opsgate` CLI(22+ 子命令),推荐先用 `docker compose up -d` 跑起来再用 CLI 管理。

@@ -4,12 +4,12 @@ import { spawnSync } from 'node:child_process';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { SERVER_CONFIG } from '../build/config/server.js';
+import { SERVER_CONFIG } from '../packages/server/dist/config/server.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const rootDir = path.resolve(__dirname, '..');
-const entrypoint = path.join(rootDir, 'build', 'index.js');
+const entrypoint = path.join(rootDir, 'packages', 'server', 'dist', 'index.js');
 const packageJson = JSON.parse(
   fs.readFileSync(path.join(rootDir, 'package.json'), 'utf8')
 );
@@ -72,7 +72,7 @@ describe('CLI info flags', () => {
     const result = runCli(['--help']);
 
     assert.strictEqual(result.status, 0);
-    assert.match(result.stdout, /Usage: ssh-mcp-server/);
+    assert.match(result.stdout, /Usage: opsgate-server/);
     for (const option of expectedHelpOptions) {
       assert.ok(
         result.stdout.includes(option),
@@ -87,7 +87,7 @@ describe('CLI info flags', () => {
     const result = runCli(['--config-file', missingConfigPath, '--help']);
 
     assert.strictEqual(result.status, 0);
-    assert.match(result.stdout, /Usage: ssh-mcp-server/);
+    assert.match(result.stdout, /Usage: opsgate-server/);
     assert.doesNotMatch(result.stderr, /Config file not found/);
     assert.doesNotMatch(result.stderr, /Unknown option/);
   });

@@ -1,6 +1,6 @@
 import { describe, it, before, after } from 'node:test';
 import assert from 'node:assert';
-import { CommandLineParser } from '../build/cli/command-line-parser.js';
+import { CommandLineParser } from '../packages/server/dist/cli/command-line-parser.js';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';

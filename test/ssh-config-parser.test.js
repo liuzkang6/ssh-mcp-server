@@ -1,6 +1,6 @@
 import { describe, it, before, after } from 'node:test';
 import assert from 'node:assert';
-import { lookupSshConfig } from '../build/utils/ssh-config-parser.js';
+import { lookupSshConfig } from '../packages/server/dist/utils/ssh-config-parser.js';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
