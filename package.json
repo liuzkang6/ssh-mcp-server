@@ -15,29 +15,52 @@
   "bin": {
     "ssh-mcp-server": "build/index.js"
   },
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
     "test": "node scripts/run-tests.js",
     "test:watch": "node --test --watch test/**/*.test.js",
     "build": "node scripts/build.js",
-    "prepublishOnly": "npm run build"
+    "prepublishOnly": "npm run build",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "node --import tsx/esm src/db/migrate.ts",
+    "db:seed": "node --import tsx/esm scripts/seed.ts"
   },
   "keywords": [
     "ssh",
     "mcp",
     "server",
-    "cli"
+    "cli",
+    "devops",
+    "ai-agent"
   ],
   "author": "Junki",
   "license": "ISC",
   "dependencies": {
+    "@fastify/bearer-auth": "^10.0.1",
+    "@fastify/cors": "^10.0.1",
+    "@fastify/jwt": "^9.0.1",
+    "@fastify/static": "^8.3.0",
+    "@fastify/websocket": "^11.0.1",
     "@modelcontextprotocol/sdk": "^1.27.0",
+    "@noble/ciphers": "^1.0.0",
+    "bcrypt": "^5.1.1",
+    "better-sqlite3": "^11.7.0",
+    "drizzle-orm": "^0.36.0",
+    "fastify": "^5.1.0",
     "socks": "^2.8.7",
     "ssh2": "^1.17.0",
+    "ulid": "^2.3.0",
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@types/bcrypt": "^5.0.2",
+    "@types/better-sqlite3": "^7.6.12",
     "@types/node": "^22.13.10",
     "@types/ssh2": "^1.15.5",
+    "drizzle-kit": "^0.30.0",
+    "tsx": "^4.19.0",
     "typescript": "^5.8.2"
   },
   "files": [
