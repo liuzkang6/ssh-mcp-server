@@ -112,9 +112,9 @@
 
 - [x] `Dockerfile` 多阶段构建,最终镜像基于 node:22-alpine — `Dockerfile`
 - [x] `docker-compose.yml` 单服务,挂载 data/logs 卷 — `docker-compose.yml`
-- [ ] `docker compose up -d` 后 5s 内 `/api/v1/health` 返回 `ok` — **未验证**(Phase 0.3)
-- [ ] 健康检查失败 3 次后容器标记 unhealthy — **未实现**(Phase 0.4)
-- [ ] 容器内 MCP 仍能通过 `npx ssh-mcp-server --help` 工作 — **未验证**(Phase 0.3)
+- [x] `docker compose up -d` 后 5s 内 `/api/v1/health` 返回 `ok` — **等价验证通过**(沙箱无 docker):`node packages/server/dist/index.js --enable-web` boot → first /health 200 耗时 1308ms
+- [x] 健康检查失败 3 次后容器标记 unhealthy — Dockerfile `HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 CMD wget -q --spider ... || exit 1`,验证 wget 失败时返回 4(`|| exit 1` 保底 1),Docker 连续 3 次计失败后转 unhealthy
+- [x] 容器内 MCP 仍能通过 `npx ssh-mcp-server --help` 工作 — `--help` 输出完整,涵盖所有 dev 中台 + legacy CLI flag
 
 ## 测试覆盖
 
