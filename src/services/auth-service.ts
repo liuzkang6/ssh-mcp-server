@@ -1,4 +1,5 @@
 import { ulid } from 'ulid';
+import bcrypt from 'bcrypt';
 import { getOperatorManager, type OperatorManager } from './operator-manager.js';
 import type { Operator } from '../db/schema.js';
 import { createHmac, timingSafeEqual } from 'node:crypto';
@@ -170,12 +171,14 @@ export class AuthService {
     if (this.apiKeyCache.has(key)) {
       return this.apiKeyCache.get(key)!;
     }
-    // 退化:扫表
+    // 退化:扫全表 agent,用 bcrypt 比对明文 key vs credentialHash
+    // bcrypt 单次 ~100ms,agent 数量小(MVP)可接受
     const agents = this.opManager.list({ type: 'agent' });
     for (const a of agents) {
-      // 注意:这里不能直接拿 credentialHash(单向),只能假设 key 与 name 关联
-      // 实际 verifyCredential 会再次验证 bcrypt,这里只是优化"先找候选"
-      // MVP 简化:全表 verify,反正 agent 数量不大
+      if (bcrypt.compareSync(key, a.credentialHash)) {
+        this.apiKeyCache.set(key, a.name);
+        return a.name;
+      }
     }
     return null;
   }
