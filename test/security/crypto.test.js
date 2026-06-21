@@ -7,7 +7,7 @@ const TEST_KEY = Buffer.alloc(32, 1).toString('base64'); // 32 bytes of 0x01
 process.env.ENCRYPTION_KEY = TEST_KEY;
 
 const { encrypt, decrypt, encryptOptional, decryptOptional, loadMasterKey, _resetForTesting } =
-  await import('../../build/security/crypto.js');
+  await import('../../packages/server/dist/security/crypto.js');
 
 describe('crypto', () => {
   beforeEach(() => {

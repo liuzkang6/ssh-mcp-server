@@ -29,20 +29,20 @@ const DATA_DIR = mkdtempSync(join(tmpdir(), 'lifecycle-test-'));
 process.env.DATA_DIR = DATA_DIR;
 const dbPath = join(DATA_DIR, 'platform.db');
 
-const { runMigrations } = await import('../../build/db/migrate.js');
-const { closeDb, getDb } = await import('../../build/db/index.js');
-const { sessions } = await import('../../build/db/schema.js');
+const { runMigrations } = await import('../../packages/server/dist/db/migrate.js');
+const { closeDb, getDb } = await import('../../packages/server/dist/db/index.js');
+const { sessions } = await import('../../packages/server/dist/db/schema.js');
 const { getPool, _resetPoolForTesting } = await import(
-  '../../build/services/ssh-connection-pool.js'
+  '../../packages/server/dist/services/ssh-connection-pool.js'
 );
 const { getSSHSessionService, _resetSSHSessionServiceForTesting } = await import(
-  '../../build/services/ssh-session-service.js'
+  '../../packages/server/dist/services/ssh-session-service.js'
 );
 const { getServerManager } = await import(
-  '../../build/services/server-manager.js'
+  '../../packages/server/dist/services/server-manager.js'
 );
 const { getOperatorManager } = await import(
-  '../../build/services/operator-manager.js'
+  '../../packages/server/dist/services/operator-manager.js'
 );
 
 // 2) 生成 SSH host key(给 mock server 用)

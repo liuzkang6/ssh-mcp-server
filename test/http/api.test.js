@@ -24,13 +24,13 @@ const DATA_DIR = mkdtempSync(join(tmpdir(), 'api-test-'));
 process.env.DATA_DIR = DATA_DIR;
 const dbPath = join(DATA_DIR, 'platform.db');
 
-const { runMigrations } = await import('../../build/db/migrate.js');
-const { closeDb, getDb } = await import('../../build/db/index.js');
-const { createHttpServer } = await import('../../build/http/server.js');
-const { getOperatorManager } = await import('../../build/services/operator-manager.js');
-const { getServerManager } = await import('../../build/services/server-manager.js');
-const { getAuthService } = await import('../../build/services/auth-service.js');
-const { getAuditService } = await import('../../build/services/audit-service.js');
+const { runMigrations } = await import('../../packages/server/dist/db/migrate.js');
+const { closeDb, getDb } = await import('../../packages/server/dist/db/index.js');
+const { createHttpServer } = await import('../../packages/server/dist/http/server.js');
+const { getOperatorManager } = await import('../../packages/server/dist/services/operator-manager.js');
+const { getServerManager } = await import('../../packages/server/dist/services/server-manager.js');
+const { getAuthService } = await import('../../packages/server/dist/services/auth-service.js');
+const { getAuditService } = await import('../../packages/server/dist/services/audit-service.js');
 const { ulid } = await import('ulid');
 
 // ── 共享测试状态(在 beforeEach 中重置) ────────────────────

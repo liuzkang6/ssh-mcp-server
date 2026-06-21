@@ -20,10 +20,10 @@ const DATA_DIR = mkdtempSync(join(tmpdir(), 'pool-test-'));
 process.env.DATA_DIR = DATA_DIR;
 const dbPath = join(DATA_DIR, 'platform.db');
 
-const { runMigrations } = await import('../../build/db/migrate.js');
-const { closeDb, getDb } = await import('../../build/db/index.js');
+const { runMigrations } = await import('../../packages/server/dist/db/migrate.js');
+const { closeDb, getDb } = await import('../../packages/server/dist/db/index.js');
 const { getPool, _resetPoolForTesting } = await import(
-  '../../build/services/ssh-connection-pool.js'
+  '../../packages/server/dist/services/ssh-connection-pool.js'
 );
 
 before(() => {

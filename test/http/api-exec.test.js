@@ -50,19 +50,19 @@ const LOCAL_TMP_DIR = resolvePath('.api-exec-test-tmp');
 process.env.LOCAL_TEST_TMP_DIR = LOCAL_TMP_DIR;
 
 // ── 2) 导入 ───────────────────────────────────────────────────
-const { runMigrations } = await import('../../build/db/migrate.js');
-const { closeDb, getDb } = await import('../../build/db/index.js');
-const { auditLogs } = await import('../../build/db/schema.js');
-const { getServerManager } = await import('../../build/services/server-manager.js');
-const { getOperatorManager } = await import('../../build/services/operator-manager.js');
-const { getAuthService } = await import('../../build/services/auth-service.js');
+const { runMigrations } = await import('../../packages/server/dist/db/migrate.js');
+const { closeDb, getDb } = await import('../../packages/server/dist/db/index.js');
+const { auditLogs } = await import('../../packages/server/dist/db/schema.js');
+const { getServerManager } = await import('../../packages/server/dist/services/server-manager.js');
+const { getOperatorManager } = await import('../../packages/server/dist/services/operator-manager.js');
+const { getAuthService } = await import('../../packages/server/dist/services/auth-service.js');
 const { getPool, _resetPoolForTesting } = await import(
-  '../../build/services/ssh-connection-pool.js'
+  '../../packages/server/dist/services/ssh-connection-pool.js'
 );
 const { _resetSSHSessionServiceForTesting } = await import(
-  '../../build/services/ssh-session-service.js'
+  '../../packages/server/dist/services/ssh-session-service.js'
 );
-const { createHttpServer } = await import('../../build/http/server.js');
+const { createHttpServer } = await import('../../packages/server/dist/http/server.js');
 
 // ── 3) Mock SSH server(同 mcp-tools.test.js) ──────────────
 const { privateKey } = generateKeyPairSync('rsa', {

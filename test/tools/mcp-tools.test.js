@@ -41,28 +41,28 @@ const LOCAL_TMP_DIR = resolvePath('.mcp-tools-test-tmp');
 process.env.LOCAL_TEST_TMP_DIR = LOCAL_TMP_DIR;
 
 // ── 2) 工具/服务导入 ────────────────────────────────────────────
-const { runMigrations } = await import('../../build/db/migrate.js');
-const { closeDb, getDb } = await import('../../build/db/index.js');
-const { auditLogs } = await import('../../build/db/schema.js');
-const { getServerManager } = await import('../../build/services/server-manager.js');
-const { getOperatorManager } = await import('../../build/services/operator-manager.js');
-const { getAuthService } = await import('../../build/services/auth-service.js');
+const { runMigrations } = await import('../../packages/server/dist/db/migrate.js');
+const { closeDb, getDb } = await import('../../packages/server/dist/db/index.js');
+const { auditLogs } = await import('../../packages/server/dist/db/schema.js');
+const { getServerManager } = await import('../../packages/server/dist/services/server-manager.js');
+const { getOperatorManager } = await import('../../packages/server/dist/services/operator-manager.js');
+const { getAuthService } = await import('../../packages/server/dist/services/auth-service.js');
 const { getPool, _resetPoolForTesting } = await import(
-  '../../build/services/ssh-connection-pool.js'
+  '../../packages/server/dist/services/ssh-connection-pool.js'
 );
 const { _resetSSHSessionServiceForTesting } = await import(
-  '../../build/services/ssh-session-service.js'
+  '../../packages/server/dist/services/ssh-session-service.js'
 );
 // 4 旧工具
-const { listServersHandler } = await import('../../build/tools/list-servers.js');
-const { executeCommandHandler } = await import('../../build/tools/execute-command.js');
-const { uploadHandler } = await import('../../build/tools/upload.js');
-const { downloadHandler } = await import('../../build/tools/download.js');
+const { listServersHandler } = await import('../../packages/server/dist/tools/list-servers.js');
+const { executeCommandHandler } = await import('../../packages/server/dist/tools/execute-command.js');
+const { uploadHandler } = await import('../../packages/server/dist/tools/upload.js');
+const { downloadHandler } = await import('../../packages/server/dist/tools/download.js');
 // 4 新工具
-const { getServerStatusHandler } = await import('../../build/tools/get-server-status.js');
-const { batchExecuteCommandHandler } = await import('../../build/tools/batch-execute-command.js');
-const { searchFilesHandler } = await import('../../build/tools/search-files.js');
-const { queryAuditLogsHandler, queryAuditLogs } = await import('../../build/tools/query-audit-logs.js');
+const { getServerStatusHandler } = await import('../../packages/server/dist/tools/get-server-status.js');
+const { batchExecuteCommandHandler } = await import('../../packages/server/dist/tools/batch-execute-command.js');
+const { searchFilesHandler } = await import('../../packages/server/dist/tools/search-files.js');
+const { queryAuditLogsHandler, queryAuditLogs } = await import('../../packages/server/dist/tools/query-audit-logs.js');
 
 // ── 3) SSH host key(给 mock server 用) ─────────────────────────
 const { privateKey } = generateKeyPairSync('rsa', {

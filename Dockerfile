@@ -5,11 +5,12 @@
 FROM node:22-alpine AS builder
 WORKDIR /app
 
+# 复制整个 monorepo(workspace 共享 node_modules)
 COPY package*.json ./
 COPY tsconfig*.json ./
+COPY packages/ ./packages/
 RUN npm install --include=dev
 
-COPY src/ ./src/
 RUN npm run build
 
 # ───────────────────────────────────────────────────────────
@@ -24,8 +25,12 @@ RUN apk add --no-cache tini wget
 RUN addgroup -S platform && adduser -S platform -G platform
 
 # 复制构建产物和运行时依赖
-COPY --from=builder --chown=platform:platform /app/build ./build
+COPY --from=builder --chown=platform:platform /app/packages/server/dist ./packages/server/dist
+COPY --from=builder --chown=platform:platform /app/packages/cli/dist ./packages/cli/dist
+COPY --from=builder --chown=platform:platform /app/web-dist ./web-dist
 COPY --from=builder --chown=platform:platform /app/package.json ./
+COPY --from=builder --chown=platform:platform /app/packages/server/package.json ./packages/server/
+COPY --from=builder --chown=platform:platform /app/packages/cli/package.json ./packages/cli/
 COPY --from=builder --chown=platform:platform /app/node_modules ./node_modules
 
 # 持久化目录
@@ -45,4 +50,4 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
     CMD wget -q --spider http://localhost:3000/api/v1/health || exit 1
 
 ENTRYPOINT ["/sbin/tini", "--"]
-CMD ["node", "build/index.js", "--enable-web"]
+CMD ["node", "packages/server/dist/index.js", "--enable-web"]

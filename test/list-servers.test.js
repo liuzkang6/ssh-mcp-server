@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert';
-import { formatServerList } from '../build/tools/list-servers.js';
+import { formatServerList } from '../packages/server/dist/tools/list-servers.js';
 
 describe('List Servers Tool', () => {
   it('没有配置时应返回友好提示', () => {

@@ -12,9 +12,12 @@ import { registerAuditRoutes } from './routes/audit.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 // 兼容 source 直跑 / build 后跑
+//   - build 后: packages/server/dist/http/server.js → ../../../web-dist
+//   - source:   packages/server/src/http/server.ts  → ../../web-dist
+//   - 工作目录: cwd/web-dist
 const webDistCandidates = [
-  join(__dirname, '..', '..', 'web-dist'), // build/http/server.js → ../../web-dist
-  join(__dirname, '..', 'web-dist'),       // src/http/server.ts → ../web-dist
+  join(__dirname, '..', '..', '..', 'web-dist'),
+  join(__dirname, '..', '..', 'web-dist'),
   join(process.cwd(), 'web-dist'),
 ];
 

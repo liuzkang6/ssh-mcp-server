@@ -9,7 +9,7 @@ import { fileURLToPath } from 'node:url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const rootDir = path.join(__dirname, '..');
-const entrypoint = path.join(rootDir, 'build', 'index.js');
+const entrypoint = path.join(rootDir, 'packages', 'server', 'dist', 'index.js');
 
 function waitForOutput(stream, pattern, timeoutMs = 5000) {
   return new Promise((resolve, reject) => {
