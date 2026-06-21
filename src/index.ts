@@ -24,6 +24,8 @@ Options:
   -w, --password <password>        SSH password
   -k, --privateKey <path>          SSH private key path
   -P, --passphrase <passphrase>    SSH private key passphrase
+  -a, --agent <path>               Run server in agent mode (path to agent key file)
+  --ssh-config-file <path>         Use ~/.ssh/config file for host lookup
   -W, --whitelist <patterns>       Command whitelist regexes, comma-separated
   -B, --blacklist <patterns>       Command blacklist regexes, comma-separated
   -s, --socksProxy <url>           SOCKS proxy URL

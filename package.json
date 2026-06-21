@@ -13,9 +13,11 @@
   },
   "homepage": "https://github.com/classfang/ssh-mcp-server#readme",
   "bin": {
-    "ssh-mcp-server": "build/index.js",
-    "ssh-mcp-cli": "build/cli-tool/index.js"
+    "ssh-mcp-server": "build/index.js"
   },
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
     "test": "node scripts/run-tests.js",
     "test:watch": "node --test --watch test/**/*.test.js",
