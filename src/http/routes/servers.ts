@@ -178,7 +178,12 @@ export function registerServerRoutes(app: FastifyInstance) {
         reply.code(403).send({ code: 'SERVER_ACCESS_DENIED', message: 'No permission' });
         return;
       }
-      const body = ExecBody.parse(request.body);
+      const parsed = ExecBody.safeParse(request.body);
+      if (!parsed.success) {
+        reply.code(400).send({ code: 'VALIDATION_ERROR', message: parsed.error.message });
+        return;
+      }
+      const body = parsed.data;
       const audit = getAuditService();
       const start = Date.now();
       try {
@@ -253,7 +258,12 @@ export function registerServerRoutes(app: FastifyInstance) {
         reply.code(403).send({ code: 'SERVER_ACCESS_DENIED', message: 'No permission' });
         return;
       }
-      const body = UploadBody.parse(request.body);
+      const parsed = UploadBody.safeParse(request.body);
+      if (!parsed.success) {
+        reply.code(400).send({ code: 'VALIDATION_ERROR', message: parsed.error.message });
+        return;
+      }
+      const body = parsed.data;
       const audit = getAuditService();
       const start = Date.now();
       try {
@@ -319,7 +329,12 @@ export function registerServerRoutes(app: FastifyInstance) {
         reply.code(403).send({ code: 'SERVER_ACCESS_DENIED', message: 'No permission' });
         return;
       }
-      const body = DownloadBody.parse(request.body);
+      const parsed = DownloadBody.safeParse(request.body);
+      if (!parsed.success) {
+        reply.code(400).send({ code: 'VALIDATION_ERROR', message: parsed.error.message });
+        return;
+      }
+      const body = parsed.data;
       const audit = getAuditService();
       const start = Date.now();
       try {

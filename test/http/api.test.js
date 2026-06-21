@@ -32,30 +32,8 @@ const { getServerManager } = await import('../../build/services/server-manager.j
 const { getAuthService } = await import('../../build/services/auth-service.js');
 const { getAuditService } = await import('../../build/services/audit-service.js');
 const { ulid } = await import('ulid');
-const bcrypt = (await import('bcrypt')).default;
 
-// ── 修补 auth-service 的 prototype ──────────────────────────────────────
-// 已知源码 bug:AuthService.lookupNameByApiKeyPrefix 的 for 循环是空的(永远 return null),
-// 导致 Agent 的 API Key 鉴权全失败。这里打 prototype 补丁,补上正确的"遍历 agent 用 bcrypt 比对"实现。
-// 仅修改运行时行为,不动 src/。等 src 修好之后,这个 patch 变成 no-op(被 apiKeyCache 命中短路)。
-{
-  const authProto = Object.getPrototypeOf(getAuthService());
-  authProto.lookupNameByApiKeyPrefix = function (key) {
-    if (this.apiKeyCache.has(key)) {
-      return this.apiKeyCache.get(key);
-    }
-    const agents = this.opManager.list({ type: 'agent' });
-    for (const a of agents) {
-      if (bcrypt.compareSync(key, a.credentialHash)) {
-        this.apiKeyCache.set(key, a.name);
-        return a.name;
-      }
-    }
-    return null;
-  };
-}
-
-// 共享测试状态(在 beforeEach 中重置)
+// ── 共享测试状态(在 beforeEach 中重置) ────────────────────
 let app;
 let adminToken, viewerToken, restrictedToken;
 let admin, viewer, restricted;
