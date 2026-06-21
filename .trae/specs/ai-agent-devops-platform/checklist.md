@@ -70,10 +70,10 @@
 
 - [x] `/login` 页能登录,失败显示错误 — `web/src/pages/Login.tsx`
 - [x] 登录成功后 JWT 存 localStorage,后续请求自动带 Authorization header — `web/src/api/client.ts` `setToken` + `getToken`
-- [x] `/` 仪表盘显示统计卡片(机器总数/今日操作数) — `web/src/pages/Dashboard.tsx`(最近操作列表待补,Phase 9.9)
+- [x] `/` 仪表盘显示统计卡片(机器总数/今日操作数) — `web/src/pages/Dashboard.tsx`
 - [x] `/servers` 列表支持新建/编辑/删除(对话框表单) — `web/src/pages/Servers.tsx`
 - [x] `/servers` 列表支持 group/tag 过滤 — `web/src/pages/Servers.tsx` 顶部加 Input.Search + 2 个 Select,后端 `ListQuery` 走 query string
-- [~] `/servers/:id` 详情页有 5 个 Tab(终端/命令/文件/状态/审计) — **部分**:5 个 Tab 框架在,内容按 phase 补(命令/文件=Phase 9.11,状态=已含 active-sessions,审计=既有)
+- [x] `/servers/:id` 详情页有 6 个 Tab(信息/状态/命令/终端/文件/审计) — 全部实现,见 `ServerDetail.tsx`
 - [x] 401 响应自动跳登录页 — `web/src/api/client.ts` 401 拦截
 
 ## Web 终端
@@ -84,7 +84,7 @@
 - [ ] 调整浏览器窗口大小时,resize 帧同步到 server,远端 `stty` 调整 — 未实现
 - [ ] WebSocket 断开时浏览器自动重连(指数退避,最大 30s) — 未实现
 - [ ] server 侧 shell session 在断线后保留 30s 宽限期 — 未实现
-- [ ] 详情页"当前连接"列表正确显示进行中的 session — 未实现
+- [x] 详情页"当前连接"列表正确显示进行中的 session — 状态 Tab 调 `GET /servers/:id/active-sessions`
 
 ## CLI 工具
 

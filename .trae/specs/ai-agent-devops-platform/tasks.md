@@ -253,9 +253,14 @@
 - [x] **Task 9.6**: 实现服务器列表 `/servers`(AntD Table + 新建/编辑/删除)— `web/src/pages/Servers.tsx`(group/tag 过滤待补)
 - [x] **Task 9.7**: 实现服务器详情 `/servers/:id` 的"命令" Tab 框架 — `web/src/pages/ServerDetail.tsx`
 - [x] **Task 9.8**: 实现 401 拦截器(自动跳登录)— `web/src/api/client.ts`
-- [ ] **Task 9.9**: 补 Dashboard"最近操作"列表(调 `/api/v1/audit-logs?limit=10`)
+- [x] **Task 9.9**: 补 Dashboard"最近操作"列表(调 `/api/v1/audit-logs?limit=10`)— `Dashboard.tsx` 已有 Table(时间/操作/操作者/机器/耗时/状态)
 - [x] **Task 9.10**: 补 Servers 列表的 group/tag/name 过滤
-- [ ] **Task 9.11**: 补 ServerDetail 5 Tab 框架(终端/命令/文件/状态/审计)
+- [x] **Task 9.11**: 补 ServerDetail 5 Tab 框架(终端/命令/文件/状态/审计) — `ServerDetail.tsx` 已有 6 Tab(信息/状态/命令/终端/文件/审计),内容齐全,均调用现成 API:
+  - 状态:`GET /servers/:id/active-sessions`(每 5s 轮询)
+  - 命令:`POST /servers/:id/exec`(command/directory/timeoutMs)
+  - 终端:Phase 10 的 `<Terminal>` 组件(`/ws/terminal/:id`)
+  - 文件:`POST /servers/:id/upload` & `/download`
+  - 审计:`GET /audit-logs?serverId=:id&limit=50`
 
 **Task Dependencies**:
 - Task 9.2 依赖 Task 9.1
