@@ -73,7 +73,9 @@ function createTempConfig() {
 }
 
 function spawnServer(configPath) {
-  const child = spawn(process.execPath, [entrypoint, '--config-file', configPath], {
+  // 显式 --mcp-only:测试 stdio MCP 模式下的生命周期
+  // (默认是 HTTP 模式,不会因 stdin 关闭退出)
+  const child = spawn(process.execPath, [entrypoint, '--config-file', configPath, '--mcp-only'], {
     stdio: ['pipe', 'pipe', 'pipe'],
   });
 

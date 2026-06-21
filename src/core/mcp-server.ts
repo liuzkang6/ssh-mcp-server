@@ -64,9 +64,12 @@ export class SshMcpServer {
 
     process.once("SIGINT", handleSignal);
     process.once("SIGTERM", handleSignal);
-    process.stdin.resume();
-    process.stdin.once("end", () => void this.shutdown("stdin end", 0));
-    process.stdin.once("close", () => void this.shutdown("stdin close", 0));
+    // 仅在纯 MCP 模式下监听 stdin 关闭(平台模式 HTTP + MCP 一起跑,stdin 可能未连客户端)
+    if (process.env.SSH_MCP_HTTP_MODE !== "true") {
+      process.stdin.resume();
+      process.stdin.once("end", () => void this.shutdown("stdin end", 0));
+      process.stdin.once("close", () => void this.shutdown("stdin close", 0));
+    }
 
     this.shutdownHandlersRegistered = true;
   }
@@ -75,13 +78,62 @@ export class SshMcpServer {
    * Run the server
    */
   public async run(): Promise<void> {
-    // Initialize SSH configuration
-    const parsedArgs = CommandLineParser.parseArgs();
-    this.sshManager.setConfig(parsedArgs.configs);
+    // 过滤掉平台级 CLI 参数(只保留 legacy SSH 参数)
+    const platformArgs = new Set([
+      "--enable-web",
+      "--mcp-only",
+      "--port",
+      "--api-key",
+      "--import-config",
+    ]);
+    const originalArgv = process.argv;
+    const args = process.argv.slice(2);
+    const filtered: string[] = [];
+    for (let i = 0; i < args.length; i++) {
+      const arg = args[i];
+      if (platformArgs.has(arg)) {
+        i++; // 跳过值
+        continue;
+      }
+      let isPlatform = false;
+      for (const platformArg of platformArgs) {
+        if (arg.startsWith(platformArg + "=")) {
+          isPlatform = true;
+          break;
+        }
+      }
+      if (!isPlatform) filtered.push(arg);
+    }
+    const filteredArgv = [process.argv[0], process.argv[1], ...filtered];
+    process.argv = filteredArgv;
+    const allConfigs: any[] = [];
+    let preConnect = false;
+    try {
+      // 平台模式下可能没有 legacy SSH 参数
+      const hasLegacyArgs = filtered.some(
+        (a) =>
+          a.startsWith("--config-file") ||
+          a.startsWith("--ssh") ||
+          a.startsWith("--host") ||
+          a.startsWith("-h") ||
+          a.startsWith("--ssh-config-file"),
+      );
+      if (hasLegacyArgs) {
+        // Initialize SSH configuration
+        const parsedArgs = CommandLineParser.parseArgs();
+        this.sshManager.setConfig(parsedArgs.configs);
+        allConfigs.push(...Object.values(parsedArgs.configs));
+        preConnect = parsedArgs.preConnect;
+      } else {
+        // 平台模式:不抛错,空配置
+        this.sshManager.setConfig({});
+      }
+    } finally {
+      process.argv = originalArgv;
+    }
     this.registerShutdownHandlers();
 
     // Security warning
-    const allConfigs = Object.values(parsedArgs.configs);
     if (
       allConfigs.some(
         (c) => !c.commandWhitelist || c.commandWhitelist.length === 0
@@ -106,7 +158,7 @@ export class SshMcpServer {
     }
 
     // Pre-connect to all servers if flag is set
-    if (parsedArgs.preConnect) {
+    if (preConnect) {
       Logger.log("Pre-connecting to all configured SSH servers...", "info");
       try {
         await this.sshManager.connectAll();

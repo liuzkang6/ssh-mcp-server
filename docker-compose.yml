@@ -1,0 +1,54 @@
+# docker-compose.yml — 单容器 MVP 配置
+# 用法:
+#   1. 复制 .env.example 为 .env 并填入密钥
+#   2. docker compose up -d
+#   3. 访问 http://localhost:3000
+
+version: '3.8'
+
+services:
+  platform:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: ai-devops-platform:latest
+    container_name: ai-devops-platform
+    restart: unless-stopped
+    ports:
+      - "${PORT:-3000}:3000"
+    volumes:
+      - platform-data:/app/data
+      - platform-logs:/app/logs
+    environment:
+      # 必填:32 字节 base64 编码的主加密密钥
+      # 生成方式: openssl rand -base64 32
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY:?ENCRYPTION_KEY must be set}
+
+      # 必填:JWT 签名密钥,任意长字符串
+      - JWT_SECRET=${JWT_SECRET:?JWT_SECRET must be set}
+
+      # 可选:HTTP 监听端口(默认 3000)
+      - PORT=${PORT:-3000}
+
+      # 可选:运行时配置
+      - NODE_ENV=production
+      - LOG_LEVEL=info
+      - DATA_DIR=/app/data
+      - LOG_DIR=/app/logs
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000/api/v1/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  platform-data:
+    name: ai-devops-platform-data
+  platform-logs:
+    name: ai-devops-platform-logs
