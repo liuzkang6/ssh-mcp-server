@@ -1,5 +1,5 @@
-import { Table, Button, Space, Modal, Form, Input, message, Popconfirm, Tag } from "antd";
-import { useEffect, useState } from "react";
+import { Table, Button, Space, Modal, Form, Input, message, Popconfirm, Tag, Select, Card } from "antd";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../api/client";
 
@@ -15,17 +15,32 @@ interface Server {
   transportMode: "exec" | "shell";
 }
 
+interface FilterState {
+  nameLike: string;
+  group: string | undefined;
+  tag: string | undefined;
+}
+
+const EMPTY_FILTER: FilterState = { nameLike: "", group: undefined, tag: undefined };
+
 export default function Servers() {
   const [data, setData] = useState<Server[]>([]);
   const [loading, setLoading] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Server | null>(null);
   const [form] = Form.useForm();
+  // 缓存"全量(不过滤)列表"用于派生 group/tag 下拉选项
+  const [allServers, setAllServers] = useState<Server[]>([]);
+  const [filter, setFilter] = useState<FilterState>(EMPTY_FILTER);
 
-  const load = async () => {
+  const load = async (q: FilterState) => {
     setLoading(true);
     try {
-      const list = await api.get<Server[]>("/api/v1/servers");
+      const list = await api.get<Server[]>("/api/v1/servers", {
+        nameLike: q.nameLike || undefined,
+        group: q.group || undefined,
+        tag: q.tag || undefined,
+      });
       setData(list);
     } catch (e) {
       message.error((e as Error).message);
@@ -34,9 +49,31 @@ export default function Servers() {
     }
   };
 
+  // 首次加载:拉一次全量用于派生下拉
   useEffect(() => {
-    load();
+    api
+      .get<Server[]>("/api/v1/servers")
+      .then(setAllServers)
+      .catch(() => undefined);
   }, []);
+
+  useEffect(() => {
+    load(filter);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filter]);
+
+  // group/tag 选项:从全量数据派生(去重 + 排序)
+  const groupOptions = useMemo(() => {
+    const set = new Set<string>();
+    for (const s of allServers) if (s.group) set.add(s.group);
+    return Array.from(set).sort();
+  }, [allServers]);
+
+  const tagOptions = useMemo(() => {
+    const set = new Set<string>();
+    for (const s of allServers) for (const t of s.tags || []) set.add(t);
+    return Array.from(set).sort();
+  }, [allServers]);
 
   const onCreate = () => {
     setEditing(null);
@@ -54,7 +91,10 @@ export default function Servers() {
     try {
       await api.delete(`/api/v1/servers/${s.id}`);
       message.success("已删除");
-      load();
+      // 刷新全量缓存 + 列表
+      const fresh = await api.get<Server[]>("/api/v1/servers");
+      setAllServers(fresh);
+      load(filter);
     } catch (e) {
       message.error((e as Error).message);
     }
@@ -71,7 +111,10 @@ export default function Servers() {
         message.success("已创建");
       }
       setModalOpen(false);
-      load();
+      // 刷新全量缓存 + 列表
+      const fresh = await api.get<Server[]>("/api/v1/servers");
+      setAllServers(fresh);
+      load(filter);
     } catch (e) {
       message.error((e as Error).message);
     }
@@ -95,7 +138,7 @@ export default function Servers() {
     { title: "Transport", dataIndex: "transportMode" },
     {
       title: "操作",
-      render: (_: any, r: Server) => (
+      render: (_: unknown, r: Server) => (
         <Space>
           <Button size="small" onClick={() => onEdit(r)}>
             编辑
@@ -110,6 +153,9 @@ export default function Servers() {
     },
   ];
 
+  const hasFilter =
+    !!filter.nameLike || filter.group !== undefined || filter.tag !== undefined;
+
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 16 }}>
@@ -118,6 +164,44 @@ export default function Servers() {
           新建服务器
         </Button>
       </div>
+      <Card size="small" style={{ marginBottom: 16 }}>
+        <Space wrap>
+          <Input.Search
+            allowClear
+            placeholder="按名称搜索"
+            style={{ width: 220 }}
+            value={filter.nameLike}
+            onChange={(e) => setFilter((f) => ({ ...f, nameLike: e.target.value }))}
+            onSearch={(v) => setFilter((f) => ({ ...f, nameLike: v }))}
+            enterButton
+          />
+          <Select
+            allowClear
+            placeholder="按分组过滤"
+            style={{ width: 180 }}
+            value={filter.group}
+            onChange={(v) => setFilter((f) => ({ ...f, group: v }))}
+            options={groupOptions.map((g) => ({ label: g, value: g }))}
+          />
+          <Select
+            allowClear
+            placeholder="按 Tag 过滤"
+            style={{ width: 180 }}
+            value={filter.tag}
+            onChange={(v) => setFilter((f) => ({ ...f, tag: v }))}
+            options={tagOptions.map((t) => ({ label: t, value: t }))}
+          />
+          <Button
+            disabled={!hasFilter}
+            onClick={() => setFilter(EMPTY_FILTER)}
+          >
+            重置
+          </Button>
+          <span style={{ color: "#999" }}>
+            共 {data.length} 台{hasFilter ? `(已过滤)` : ""}
+          </span>
+        </Space>
+      </Card>
       <Table
         rowKey="id"
         dataSource={data}

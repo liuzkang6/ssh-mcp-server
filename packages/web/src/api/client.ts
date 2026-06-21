@@ -74,8 +74,20 @@ export async function apiRequest<T = unknown>(
   return data as T;
 }
 
+type QueryParams = Record<string, string | number | undefined>;
+
+function buildUrl(path: string, params?: QueryParams): string {
+  if (!params) return path;
+  const usp = new URLSearchParams();
+  for (const [k, v] of Object.entries(params)) {
+    if (v !== undefined && v !== "") usp.append(k, String(v));
+  }
+  const qs = usp.toString();
+  return qs ? `${path}?${qs}` : path;
+}
+
 export const api = {
-  get: <T = unknown>(path: string) => apiRequest<T>("GET", path),
+  get: <T = unknown>(path: string, params?: QueryParams) => apiRequest<T>("GET", buildUrl(path, params)),
   post: <T = unknown>(path: string, body?: unknown) => apiRequest<T>("POST", path, body),
   put: <T = unknown>(path: string, body?: unknown) => apiRequest<T>("PUT", path, body),
   delete: <T = unknown>(path: string) => apiRequest<T>("DELETE", path),
