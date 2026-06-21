@@ -1,5 +1,10 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
+import type { RequestHandlerExtra } from "@modelcontextprotocol/sdk/shared/protocol.js";
+import type {
+  ServerRequest,
+  ServerNotification,
+} from "@modelcontextprotocol/sdk/types.js";
 import { Client, ConnectConfig } from "ssh2";
 import { SocksClient } from "socks";
 import { URL } from "node:url";
@@ -125,6 +130,73 @@ async function runCommand(
   });
 }
 
+export interface GetServerStatusArgs {
+  serverName: string;
+  timeout?: number;
+}
+
+/**
+ * 核心 handler。单独导出,方便测试时直接调,不必经过 McpServer 反射。
+ *
+ * 现有实现未做 Bearer 鉴权(工具由 trust 的 stdio transport 调用),
+ * 因此 `extra` 参数被忽略;写 audit 时 `operatorId=null / operatorType='agent'`。
+ */
+export async function getServerStatusHandler(
+  args: GetServerStatusArgs,
+  _extra: RequestHandlerExtra<ServerRequest, ServerNotification>,
+) {
+  const { serverName, timeout } = args;
+  const start = Date.now();
+  const audit = getAuditService();
+  try {
+    const srvMgr = getServerManager();
+    const server = srvMgr.getByName(serverName);
+    if (!server) {
+      throw new Error(`Server not found: ${serverName}`);
+    }
+    const effectiveTimeout = timeout ?? 30000;
+    const status = await collectSystemStatus(
+      (cmd) => runCommand(server.id, cmd, effectiveTimeout),
+      server.name,
+    );
+    const durationMs = Date.now() - start;
+    audit.write({
+      operatorId: null,
+      operatorType: "agent",
+      serverId: server.id,
+      action: "get_server_status",
+      input: { serverName, timeout: effectiveTimeout },
+      output: JSON.stringify(status),
+      status: "success",
+      durationMs,
+    });
+    return {
+      content: [{ type: "text" as const, text: JSON.stringify(status, null, 2) }],
+    };
+  } catch (e: unknown) {
+    const durationMs = Date.now() - start;
+    audit.write({
+      operatorId: null,
+      operatorType: "agent",
+      action: "get_server_status",
+      input: { serverName },
+      status: "failed",
+      errorMessage: (e as Error).message,
+      durationMs,
+    });
+    Logger.handleError(e, "get_server_status failed");
+    return {
+      content: [
+        {
+          type: "text" as const,
+          text: JSON.stringify({ code: "INTERNAL_ERROR", message: (e as Error).message }),
+        },
+      ],
+      isError: true,
+    };
+  }
+}
+
 export function registerGetServerStatusTool(server: McpServer): void {
   server.registerTool(
     "get-server-status",
@@ -139,56 +211,6 @@ export function registerGetServerStatusTool(server: McpServer): void {
           .describe("Timeout in milliseconds (default 30000)"),
       },
     },
-    async ({ serverName, timeout }) => {
-      const start = Date.now();
-      const audit = getAuditService();
-      try {
-        const srvMgr = getServerManager();
-        const server = srvMgr.getByName(serverName);
-        if (!server) {
-          throw new Error(`Server not found: ${serverName}`);
-        }
-        const effectiveTimeout = timeout ?? 30000;
-        const status = await collectSystemStatus(
-          (cmd) => runCommand(server.id, cmd, effectiveTimeout),
-          server.name,
-        );
-        const durationMs = Date.now() - start;
-        audit.write({
-          operatorId: null,
-          operatorType: "agent",
-          serverId: server.id,
-          action: "get_server_status",
-          input: { serverName, timeout: effectiveTimeout },
-          output: JSON.stringify(status),
-          status: "success",
-          durationMs,
-        });
-        return {
-          content: [{ type: "text", text: JSON.stringify(status, null, 2) }],
-        };
-      } catch (e: unknown) {
-        const durationMs = Date.now() - start;
-        audit.write({
-          operatorId: null,
-          operatorType: "agent",
-          action: "get_server_status",
-          input: { serverName },
-          status: "failed",
-          errorMessage: (e as Error).message,
-          durationMs,
-        });
-        Logger.handleError(e, "get_server_status failed");
-        return {
-          content: [
-            {
-              type: "text",
-              text: JSON.stringify({ code: "INTERNAL_ERROR", message: (e as Error).message }),
-            },
-          ],
-          isError: true,
-        };
-      }
-    },
+    async (args, extra) => getServerStatusHandler(args, extra),
   );
 }

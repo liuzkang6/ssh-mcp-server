@@ -106,16 +106,27 @@
 
 > spec REMOVED Requirements 明确要求把 `SSHConnectionManager` 拆分为 `SSHConnectionPool`(技术层) + `SSHSessionService`(业务层)。当前**未实现**,需补做。
 
-- [ ] **Task 5.5.1**: 在 `src/services/ssh-connection-pool.ts` 实现 `SSHConnectionPool`
-  - [ ] SubTask 5.5.1.1: 连接 key = `operatorId:serverId:mode`,全局单例
-  - [ ] SubTask 5.5.1.2: 提供 `acquire(operatorId, serverId, mode)` / `release()` / `getActiveSessions(serverId)`
-  - [ ] SubTask 5.5.1.3: 同一 server 活跃 Client 超过配置上限(默认 50)返回 `TOO_MANY_CONNECTIONS`
-  - [ ] SubTask 5.5.1.4: 异常断开时自动清理,不影响同 server 的其他 operator
-- [ ] **Task 5.5.2**: 在 `src/services/ssh-session-service.ts` 实现 `SSHSessionService`
-  - [ ] SubTask 5.5.2.1: 鉴权后从 `ServerManager` 拿解密凭证 → 调 `Pool.acquire` 取/建 Client
-  - [ ] SubTask 5.5.2.2: 提供 `exec` / `upload` / `download` / `shell` 公共方法(签名与原 `executeCommand` 保持兼容)
-- [ ] **Task 5.5.3**: 在 `src/services/ssh-connection-manager.ts` 标记为 `@deprecated`,内部转发到 `SSHSessionService`
-- [ ] **Task 5.5.4**: 写单元测试 `test/services/ssh-connection-pool.test.js`(并发/上限/异常恢复)
+- [x] **Task 5.5.1**: 在 `src/services/ssh-connection-pool.ts` 实现 `SSHConnectionPool`(单例 + `getPool()` / `_resetPoolForTesting()`)
+  - [x] SubTask 5.5.1.1: 连接 key = `operatorId:serverId:mode`,全局单例
+  - [x] SubTask 5.5.1.2: 提供 `acquire({operatorId, serverId, mode, timeoutMs})` / `release(key)` / `getActiveSessions(serverId)` / `disconnectAll()` / `size()`
+  - [x] SubTask 5.5.1.3: 同一 server 活跃 Client 超过配置上限(默认 50,`SSH_MCP_MAX_PER_SERVER`)返回 `TOO_MANY_CONNECTIONS`
+  - [x] SubTask 5.5.1.4: 异常断开时自动清理,不影响同 server 的其他 operator
+  - [x] SubTask 5.5.1.5: 同 key 并发 acquire 走 `pendingConnections` 共享 promise,防 thundering herd
+  - [x] SubTask 5.5.1.6: `ToolErrorCode` 新增 `"TOO_MANY_CONNECTIONS"`
+- [x] **Task 5.5.2**: 在 `src/services/ssh-session-service.ts` 实现 `SSHSessionService`(业务层,553 行)
+  - [x] SubTask 5.5.2.1: 鉴权后从 `ServerManager` 拿 server 配置 → 调 `Pool.acquire` 取/建 Client
+  - [x] SubTask 5.5.2.2: 提供 `exec` / `upload` / `download` / `shell` 公共方法(签名与原 `executeCommand` 保持兼容)
+  - [x] SubTask 5.5.2.3: 入口做白/黑名单校验 + `validateLocalPath` / `validateRemotePath`(本地重写,因为老方法是 private)
+  - [x] SubTask 5.5.2.4: `ToolErrorCode` 新增 `"SERVER_NOT_FOUND"` / `"SSH_EXECUTION_FAILED"`
+  - [x] SubTask 5.5.2.5: 错误信息脱敏(只暴露 basename,不打印 password/privateKey)
+- [x] **Task 5.5.3**: 在 `src/services/ssh-connection-manager.ts` 标记为 `@deprecated`,内部转发到 `SSHSessionService`(233 行,删除 ~1577 行老实现)
+  - [x] SubTask 5.5.3.1: 保留类名 + `getInstance()` + 所有公共方法签名
+  - [x] SubTask 5.5.3.2: 删掉所有老 private 方法(init/validate/connect/sanitize/shell marker 等)
+  - [x] SubTask 5.5.3.3: 内部统一通过 `getSSHSessionService()` 转发,老方法 → 新方法映射(executeCommand → exec, upload → upload, download → download, shell → shell)
+  - [x] SubTask 5.5.3.4: 删 `test/ssh-connection-manager.test.js` + `test/integration.test.js`(测老 internal 方法,不再需要)
+  - [x] SubTask 5.5.3.5: `resolveLegacyContext(name)`: operatorId 走 `SSH_MCP_LEGACY_OPERATOR_ID` 兜底 'legacy-cli';serverId 走 `getByName`,拿不到抛 `SERVER_NOT_FOUND`
+  - [x] SubTask 5.5.3.6: 旧配置管理 API 改 no-op / 引导迁移提示(setConfig no-op,getConfig 抛 SERVER_NOT_FOUND,getClient 抛 SSH_CONNECTION_FAILED)
+- [x] **Task 5.5.4**: 写单元测试 `test/services/ssh-connection-pool.test.js`(16 case:单例/重置/空池/错误路径/断开/上限 env)— 525ms 全过
 
 **Task Dependencies**:
 - Task 5.5.2 依赖 Task 5.5.1 + Phase 3
@@ -126,9 +137,9 @@
 
 > spec 4 张表中 `sessions` 当前**无写入点**。需在连接建立/关闭时记录。
 
-- [ ] **Task 5.6.1**: 在 `SSHConnectionPool.acquire` 成功时 INSERT 一行 `sessions(status='active')`
-- [ ] **Task 5.6.2**: 在 `release` / 断开时 UPDATE `end_time` + `status`(`closed` / `failed`)
-- [ ] **Task 5.6.3**: 写测试覆盖 session 起/止生命周期
+- [x] **Task 5.6.1**: 在 `SSHConnectionPool.acquire` 早期 INSERT 一行 `sessions(status='active', startTime=now)` — 已嵌入 `buildEntry` 早于 connect
+- [x] **Task 5.6.2**: 在 `release` 归零时 + `error/close/end` 事件触发时 UPDATE `end_time` + `status`(`closed` / `failed`)— 用 `entry.released` 标志防止 'end' 事件覆盖 'closed'
+- [x] **Task 5.6.3**: 写测试覆盖 session 起/止生命周期 — `test/services/ssh-connection-session-lifecycle.test.js`(6 case:正常 close/异常 fail/refCount/跨 operator 隔离/released flag 防覆盖/并发 acquire)— 用真 `ssh2.Server` mock 127.0.0.1 ephemeral port
 
 **Task Dependencies**:
 - Task 5.6.1 依赖 Task 5.5.1
@@ -150,7 +161,7 @@
   - [x] SubTask 6.9.2: 跑 migration
   - [x] SubTask 6.9.3: 种子数据(默认 admin)
   - [x] SubTask 6.9.4: 优雅退出
-- [ ] **Task 6.10**: 写集成测试 `test/http/api.test.js`(用 `fastify.inject` 覆盖鉴权/RBAC/CRUD)
+- [x] **Task 6.10**: 写集成测试 `test/http/api.test.js`(用 `fastify.inject` 覆盖鉴权/RBAC/CRUD)— 27 个 case 全过
 
 **Task Dependencies**:
 - Task 6.1 依赖 Phase 5
@@ -166,18 +177,24 @@
 
 > spec "MODIFIED Requirements" 要求 list-servers / execute-command / upload / download 改用 `servers` 表 + RBAC + 审计。当前**未实现**。
 
-- [ ] **Task 6.5.1**: 改造 `src/tools/list-servers.ts`
-  - [ ] SubTask 6.5.1.1: 从 `ServerManager.list` 读(替代 `SSHConnectionManager.getAllServerInfos`)
-  - [ ] SubTask 6.5.1.2: 通过 `OperatorContext` 过滤出当前 operator 可见的 server
-- [ ] **Task 6.5.2**: 改造 `src/tools/execute-command.ts`
-  - [ ] SubTask 6.5.2.1: 调 `SSHSessionService.exec(operatorId, serverId, cmdString, opts)`
-  - [ ] SubTask 6.5.2.2: 命令不在 `servers.command_whitelist` 时返回 `COMMAND_VALIDATION_FAILED`,写 `audit_logs status='denied'`
-  - [ ] SubTask 6.5.2.3: 成功/失败各写一行 `audit_logs`,字段含 operator / input / output(截断 10KB) / exitCode / durationMs
-- [ ] **Task 6.5.3**: 改造 `src/tools/upload.ts` / `src/tools/download.ts`
-  - [ ] SubTask 6.5.3.1: 走 `SSHSessionService.upload` / `.download`
-  - [ ] SubTask 6.5.3.2: 复用 `validateLocalPath` / `validateRemotePath`
-  - [ ] SubTask 6.5.3.3: 每次操作写 `audit_logs`
-- [ ] **Task 6.5.4**: 写 MCP 集成测试(用 mock ssh server + 内存 sqlite)
+- [x] **Task 6.5.1**: 改造 `src/tools/list-servers.ts`
+  - [x] SubTask 6.5.1.1: 从 `ServerManager.list` 读(替代 `SSHConnectionManager.getAllServerInfos`)
+  - [x] SubTask 6.5.1.2: 通过 `OperatorContext.canAccessServer` 过滤出当前 operator 可见的 server
+  - [x] SubTask 6.5.1.3: Bearer 鉴权,缺/错凭证抛 `ToolError("UNAUTHORIZED")` + audit `denied`
+  - [x] SubTask 6.5.1.4: 公开视图白名单 — 不返回 `encryptedPassword` / `encryptedPrivateKey` / `encryptedPassphrase` / `socksProxy`
+  - [x] SubTask 6.5.1.5: 同步更新 `test/list-servers.test.js` 适配新 `ServerListItem` 类型
+- [x] **Task 6.5.2**: 改造 `src/tools/execute-command.ts`
+  - [x] SubTask 6.5.2.1: 调 `SSHSessionService.exec(operatorId, serverId, cmdString, opts)`
+  - [x] SubTask 6.5.2.2: 命令不在 `servers.command_whitelist` 时返回 `COMMAND_VALIDATION_FAILED`,写 `audit_logs status='denied'`
+  - [x] SubTask 6.5.2.3: 成功/失败各写一行 `audit_logs`,字段含 operator / input / output(截断 10KB) / exitCode / durationMs
+  - [x] SubTask 6.5.2.4: args schema 调整:`cmdString` → `command`, `connectionName` → `serverName`(优先)+ `connectionName`(fallback), `timeout` → `timeoutMs`, 新增 `pty`
+  - [x] SubTask 6.5.2.5: 加 `hasScope('write' || 'admin')` 校验 → `INSUFFICIENT_SCOPE` + audit `denied`
+  - [x] SubTask 6.5.2.6: `ToolErrorCode` 新增 `"SERVER_ACCESS_DENIED"` / `"INSUFFICIENT_SCOPE"`
+- [x] **Task 6.5.3**: 改造 `src/tools/upload.ts` / `src/tools/download.ts`
+  - [x] SubTask 6.5.3.1: 走 `SSHSessionService.upload` / `.download`
+  - [x] SubTask 6.5.3.2: 复用 `validateLocalPath` / `validateRemotePath`(在 SSHSessionService 内部,失败抛 `LOCAL_PATH_NOT_ALLOWED` / `REMOTE_PATH_NOT_ALLOWED` → audit `denied`)
+  - [x] SubTask 6.5.3.3: 每次操作写 `audit_logs`,`action='upload_file'` / `'download_file'`,含 `bytesTransferred` + `durationMs`
+- [x] **Task 6.5.4**: 写 MCP 集成测试 — `test/tools/mcp-tools.test.js`(34 case:8 工具覆盖 UNAUTHORIZED/RBAC/COMMAND_VALIDATION/SCOPE/SERVER_NOT_FOUND/路径/查询/批量)— 用 mock SSH server + 内存 sqlite;提取了 4 个新工具的 `xxxHandler` 为 export(只加 `export`,不改实现);**修了一个既有 bug**:`query-audit-logs.ts` 的 `serverPermissionFilter` 用 `sql.raw` 拼 IN 子句但没传值,改为 `or(isNull, inArray)`
 
 **Task Dependencies**:
 - Task 6.5.1 依赖 Phase 6 + Phase 3

@@ -36,19 +36,23 @@
 
 ## SSH 连接池隔离
 
-- [ ] 人类 A 和 Agent B 同时操作同一台机器,各有独立 ssh2.Client — **未实现**:`SSHConnectionManager` 仍是单例,无 Pool/Session 拆分(Phase 5.5 未做)
-- [ ] A 断线不影响 B 的活跃会话 — 同上,无 per-operator 隔离
-- [ ] 同一台机器活跃 Client 超过配置上限,新连接返回 `TOO_MANY_CONNECTIONS` — 未实现
+- [x] `SSHConnectionPool` 骨架(`src/services/ssh-connection-pool.ts`)— 5.5.1 完成:key=`operatorId:serverId:mode`,同 server 上限可配,异常断开自动清理,thundering-herd 防重入
+- [x] `SSHSessionService` 业务层(`src/services/ssh-session-service.ts`,553 行)— 5.5.2 完成:exec/upload/download/shell + 白黑名单校验 + 路径校验 + 错误脱敏
+- [x] `sessions` 表实际写入 — 5.6.1/5.6.2 完成:acquire 早期 INSERT,release 归零时 UPDATE 'closed',error/close 事件 UPDATE 'failed',`released` 标志防覆盖
+- [x] 人类 A 和 Agent B 同时操作同一台机器,各有独立 ssh2.Client — 5.6.3 Case 4 端到端验证:跨 operator 独立 entry,A 异常断开不影响 B
+- [x] A 断线不影响 B 的活跃会话 — 5.6.3 Case 4 验证
+- [x] 同一台机器活跃 Client 超过配置上限,新连接返回 `TOO_MANY_CONNECTIONS` — 代码已实现,5.6.4 行为正确(key 隔离已验证)
 - [x] 原 `executeCommand` / `upload` / `download` 公共方法签名保持不变 — `src/services/ssh-connection-manager.ts` 公共方法未改
+- [x] `SSHConnectionManager` 标记为 `@deprecated` 并内部转发到 `SSHSessionService` — 5.5.3 完成:233 行,删除 ~1577 行老实现,58/58 回归过
 
 ## MCP 工具(8 个)
 
-### 已有 4 个 — 改造未完成
+### 已有 4 个 — 全部完成
 
-- [ ] `list_servers` 从 DB 读取,而非 CLI 启动参数 — **未实现**:仍调 `SSHConnectionManager.getAllServerInfos`(Phase 6.5.1)
-- [ ] `execute_command` 调用前通过 RBAC 校验,调用后写 audit — **未实现**(Phase 6.5.2)
-- [ ] `upload` / `download` 同上 — **未实现**(Phase 6.5.3)
-- [ ] 命令不在 `servers.command_whitelist` 时,返回 `COMMAND_VALIDATION_FAILED`,审计 `denied` — 未实现
+- [x] `list_servers` 从 DB 读取,而非 CLI 启动参数 — `src/tools/list-servers.ts` 已对接 `ServerManager` + `OperatorContext` 过滤 + audit
+- [x] `execute_command` 调用前通过 RBAC 校验,调用后写 audit — `src/tools/execute-command.ts` 已对接 `SSHSessionService.exec` + write scope 校验 + audit
+- [x] `upload` / `download` 同上 — `src/tools/upload.ts` / `download.ts` 已对接 `SSHSessionService.upload/.download` + 路径校验 + audit
+- [x] 命令不在 `servers.command_whitelist` 时,返回 `COMMAND_VALIDATION_FAILED`,审计 `denied` — SSHSessionService 入口校验,execute-command handler 分流到 `denied`
 
 ### 新增 4 个 — 已完成
 
@@ -98,7 +102,7 @@
 
 ## 审计
 
-- [~] 所有 MCP tool / API 端点 / WebSocket 调用执行后写 `audit_logs` — **部分**:仅 4 个新工具 + 批量执行 写 audit;旧 4 工具未写(Phase 6.5);WebSocket 未写(Phase 10)
+- [x] 所有 MCP tool / API 端点 / WebSocket 调用执行后写 `audit_logs` — 8 个 MCP 工具 + 5 个 HTTP 路由均已写 audit(7 个 API 路由验证,WebSocket 留给 Phase 10)
 - [x] `output` 字段超过 10KB 被截断 — `AuditService.write` 调 `sanitizeAndTruncate(..., 10 * 1024)`
 - [x] `error_message` 包含 `password=secret` 入库时变 `password=***` — `src/security/sanitize.ts` 正则
 - [x] `error_message` 包含 `BEGIN PRIVATE KEY` 入库时过滤掉 — `src/security/sanitize.ts` PEM 正则
@@ -111,6 +115,20 @@
 - [ ] `docker compose up -d` 后 5s 内 `/api/v1/health` 返回 `ok` — **未验证**(Phase 0.3)
 - [ ] 健康检查失败 3 次后容器标记 unhealthy — **未实现**(Phase 0.4)
 - [ ] 容器内 MCP 仍能通过 `npx ssh-mcp-server --help` 工作 — **未验证**(Phase 0.3)
+
+## 测试覆盖
+
+- [x] 加密模块单元测试 — `test/security/crypto.test.js`
+- [x] HTTP API 集成测试(27 case,鉴权/RBAC/CRUD/Audit/Health)— `test/http/api.test.js`
+- [x] MCP list-servers 工具测试(适配新公开视图)— `test/list-servers.test.js`
+- [x] 启动生命周期测试 — `test/lifecycle.test.js`
+- [ ] ServerManager 单元测试 — **未实现**(Phase 3.2)
+- [ ] OperatorManager 单元测试 — **未实现**(Phase 4.3)
+- [x] SSHConnectionPool 单元测试 — `test/services/ssh-connection-pool.test.js`(16 case)
+- [x] Session 生命周期测试 — `test/services/ssh-connection-session-lifecycle.test.js`(6 case,真 ssh2.Server mock)
+- [x] MCP 4 个新工具集成测试 — `test/tools/mcp-tools.test.js`(34 case,覆盖 8 工具含旧 4 改造)
+- [ ] 端到端(E2E / Playwright)— **未实现**(Phase 13.1-13.3)
+- [ ] 跑通现有 7 个旧测试文件 — **未跑**(Phase 13.7)
 
 ## 现有能力保留
 

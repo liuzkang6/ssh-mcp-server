@@ -1,6 +1,11 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { and, desc, eq, gte, sql } from "drizzle-orm";
+import type { RequestHandlerExtra } from "@modelcontextprotocol/sdk/shared/protocol.js";
+import type {
+  ServerRequest,
+  ServerNotification,
+} from "@modelcontextprotocol/sdk/types.js";
+import { and, desc, eq, gte, sql, inArray, or, isNull } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import { auditLogs } from "../db/schema.js";
 import { Logger } from "../utils/logger.js";
@@ -29,9 +34,11 @@ export async function queryAuditLogs(input: QueryAuditLogsInput) {
     conds.push(gte(auditLogs.createdAt, sinceMs));
   }
   if (input.serverPermissionFilter && input.serverPermissionFilter.length > 0) {
-    const placeholders = input.serverPermissionFilter.map(() => "?").join(",");
     conds.push(
-      sql`(${auditLogs.serverId} IS NULL OR ${auditLogs.serverId} IN (${sql.raw(placeholders)}))`,
+      or(
+        isNull(auditLogs.serverId),
+        inArray(auditLogs.serverId, input.serverPermissionFilter),
+      )!,
     );
   }
 
@@ -49,6 +56,55 @@ export async function queryAuditLogs(input: QueryAuditLogsInput) {
     .all();
 
   return rows;
+}
+
+export interface QueryAuditLogsHandlerArgs {
+  serverId?: string;
+  operatorId?: string;
+  action?: string;
+  status?: "success" | "failed" | "denied" | "cancelled";
+  sinceMinutes?: number;
+  limit?: number;
+  offset?: number;
+}
+
+/**
+ * 核心 handler。单独导出,方便测试时直接调,不必经过 McpServer 反射。
+ *
+ * 现有实现未做 Bearer 鉴权(工具由 trust 的 stdio transport 调用),
+ * 因此 `extra` 参数被忽略。
+ * 注:RBAC 过滤需要在 HTTP 层(`src/http/routes/audit.ts`)通过 `serverPermissionFilter` 注入。
+ */
+export async function queryAuditLogsHandler(
+  args: QueryAuditLogsHandlerArgs,
+  _extra: RequestHandlerExtra<ServerRequest, ServerNotification>,
+) {
+  try {
+    const rows = await queryAuditLogs(args);
+    return {
+      content: [
+        {
+          type: "text" as const,
+          text: JSON.stringify(
+            { count: rows.length, logs: rows },
+            null,
+            2,
+          ),
+        },
+      ],
+    };
+  } catch (e) {
+    Logger.handleError(e, "query_audit_logs failed");
+    return {
+      content: [
+        {
+          type: "text" as const,
+          text: JSON.stringify({ code: "INTERNAL_ERROR", message: (e as Error).message }),
+        },
+      ],
+      isError: true,
+    };
+  }
 }
 
 export function registerQueryAuditLogsTool(server: McpServer): void {
@@ -73,33 +129,6 @@ export function registerQueryAuditLogsTool(server: McpServer): void {
         offset: z.number().optional().describe("Pagination offset (default 0)"),
       },
     },
-    async (args) => {
-      try {
-        const rows = await queryAuditLogs(args);
-        return {
-          content: [
-            {
-              type: "text",
-              text: JSON.stringify(
-                { count: rows.length, logs: rows },
-                null,
-                2,
-              ),
-            },
-          ],
-        };
-      } catch (e) {
-        Logger.handleError(e, "query_audit_logs failed");
-        return {
-          content: [
-            {
-              type: "text",
-              text: JSON.stringify({ code: "INTERNAL_ERROR", message: (e as Error).message }),
-            },
-          ],
-          isError: true,
-        };
-      }
-    },
+    async (args, extra) => queryAuditLogsHandler(args, extra),
   );
 }
