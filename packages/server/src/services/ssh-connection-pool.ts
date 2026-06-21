@@ -50,6 +50,8 @@ const DEFAULT_CONNECT_TIMEOUT_MS = 30000;
 const DEFAULT_KEEPALIVE_INTERVAL_MS = 10000;
 const DEFAULT_KEEPALIVE_COUNT_MAX = 3;
 const DEFAULT_MAX_PER_SERVER = 50;
+/** Phase 10.7: Web 终端断开后 shell session 保留宽限期(ms) */
+const DEFAULT_SHELL_GRACE_MS = 30000;
 
 function readMaxPerServer(): number {
   const raw = process.env.SSH_MCP_MAX_PER_SERVER;
@@ -96,6 +98,15 @@ export class SSHConnectionPool {
   private entries = new Map<string, PoolEntry>();
   /** 同 key 并发 acquire 时复用同一个连接 Promise,防 thundering herd */
   private pendingConnections = new Map<string, Promise<PoolEntry>>();
+  /**
+   * Phase 10.7: 宽限期中的 shell session。
+   * 客户端断开后保留 graceMs,期间内同 key 的 acquire 会"复活"entry,
+   * 复用同一 SSH client + shellStream(典型场景:刷新页面 / 网络抖动重连)。
+   */
+  private draining = new Map<
+    string,
+    { entry: PoolEntry; timer: NodeJS.Timeout; expireAt: number }
+  >();
 
   /**
    * 拿/建一个 Client。
@@ -117,6 +128,12 @@ export class SSHConnectionPool {
       existing.refCount += 1;
       existing.lastUsedAt = Date.now();
       return existing;
+    }
+
+    // Phase 10.7: 检查宽限期 — 同 key 在宽限期内可"复活"复用
+    const revived = this.tryReuseDraining(key);
+    if (revived) {
+      return revived;
     }
 
     const pending = this.pendingConnections.get(key);
@@ -191,6 +208,100 @@ export class SSHConnectionPool {
   }
 
   /**
+   * Phase 10.7: 释放 ref-count,但保留 shell session 进入宽限期。
+   * - 同 key 后续 acquire() 会在宽限期内"复活"entry(取消 timer + 复用 client/stream)
+   * - 宽限期到期或 SSH 客户端异常断开,才会真正关 stream + client
+   * - 仅对 `mode='shell'` 有意义(其他模式立即释放)
+   */
+  async releaseWithGrace(key: string, graceMs?: number): Promise<void> {
+    const entry = this.entries.get(key);
+    if (!entry) return;
+
+    if (entry.refCount > 1) {
+      entry.refCount -= 1;
+      entry.lastUsedAt = Date.now();
+      return;
+    }
+
+    // 非 shell 模式:退化到立即释放
+    if (entry.mode !== "shell") {
+      await this.release(key);
+      return;
+    }
+
+    const ttl =
+      typeof graceMs === "number" && graceMs > 0
+        ? graceMs
+        : DEFAULT_SHELL_GRACE_MS;
+
+    this.entries.delete(key);
+
+    const expireAt = Date.now() + ttl;
+    const timer = setTimeout(() => {
+      const d = this.draining.get(key);
+      if (!d || d.entry !== entry) return;
+      this.draining.delete(key);
+      entry.released = true;
+      if (entry.sessionId) {
+        this.updateSessionStatus(entry.sessionId, "closed");
+      }
+      if (entry.shellStream) {
+        try {
+          entry.shellStream.close();
+        } catch {
+          // Ignore close errors during grace expiry.
+        }
+      }
+      try {
+        entry.client.end();
+      } catch {
+        // Ignore end errors during grace expiry.
+      }
+      Logger.log(
+        `SSH pool shell grace expired [${key}], entry released`,
+        "info",
+      );
+    }, ttl);
+    this.draining.set(key, { entry, timer, expireAt });
+    Logger.log(
+      `SSH pool shell grace [${key}] for ${ttl}ms (draining=${this.draining.size})`,
+      "info",
+    );
+  }
+
+  /**
+   * Phase 10.7: 尝试从宽限期"复活"一个 entry。
+   * - key 存在且未到期:取消 timer,refCount++ + lastUsedAt,返回 entry
+   * - 否则:返回 null
+   */
+  private tryReuseDraining(key: string): PoolEntry | null {
+    const d = this.draining.get(key);
+    if (!d) return null;
+    if (d.expireAt <= Date.now()) {
+      // 已到期,清理
+      clearTimeout(d.timer);
+      this.draining.delete(key);
+      return null;
+    }
+    clearTimeout(d.timer);
+    this.draining.delete(key);
+    d.entry.refCount += 1;
+    d.entry.lastUsedAt = Date.now();
+    Logger.log(`SSH pool shell grace revived [${key}]`, "info");
+    return d.entry;
+  }
+
+  /**
+   * Phase 10.7: 取消所有宽限期(测试 / 强制关闭用)。
+   */
+  clearDraining(): void {
+    for (const d of this.draining.values()) {
+      clearTimeout(d.timer);
+    }
+    this.draining.clear();
+  }
+
+  /**
    * 列出某 server 上所有活跃 session(跨 operator、跨 mode)。
    * Phase 10 Web 终端"当前连接"列表会调它。
    */
@@ -209,6 +320,7 @@ export class SSHConnectionPool {
     const entries = Array.from(this.entries.values());
     this.entries.clear();
     this.pendingConnections.clear();
+    this.clearDraining();
 
     for (const entry of entries) {
       // Phase 5.6:把每个 session 也记为 'closed',并置 released 防止 'end' 事件覆盖。
@@ -403,6 +515,13 @@ export class SSHConnectionPool {
       // 跳过 UPDATE(否则会覆盖 'closed' 状态)。
       if (entry.sessionId && !entry.released) {
         this.updateSessionStatus(entry.sessionId, "failed");
+      }
+      // Phase 10.7: 宽限期中的 entry 也会被 end/close 事件触发清理。
+      // 从 draining map 中移除(若仍在),并清掉 timer。
+      const d = this.draining.get(key);
+      if (d && d.entry === entry) {
+        clearTimeout(d.timer);
+        this.draining.delete(key);
       }
       if (this.entries.get(key) === entry) {
         this.entries.delete(key);

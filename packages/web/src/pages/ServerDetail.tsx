@@ -14,7 +14,8 @@ import {
 } from "antd";
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { api } from "../api/client";
+import { api, getToken } from "../api/client";
+import { Terminal } from "../components/Terminal";
 
 interface Server {
   id: string;
@@ -290,11 +291,15 @@ export default function ServerDetail() {
         </Tabs.TabPane>
 
         <Tabs.TabPane tab="终端" key="terminal">
-          <Alert
-            type="info"
-            message="Web 终端开发中 (Phase 10)"
-            description="MVP 阶段,请使用 CLI 的 terminal 子命令唤起浏览器 / 直接通过 MCP client 操作。"
-          />
+          {getToken() ? (
+            <Terminal
+              serverId={id}
+              serverName={server.name}
+              token={getToken()!}
+            />
+          ) : (
+            <Alert type="warning" message="需要登录后才能打开终端" />
+          )}
         </Tabs.TabPane>
 
         <Tabs.TabPane tab="文件" key="files">

@@ -1,6 +1,7 @@
 import Fastify, { type FastifyInstance } from 'fastify';
 import cors from '@fastify/cors';
 import fastifyStatic from '@fastify/static';
+import fastifyWebsocket from '@fastify/websocket';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { existsSync } from 'node:fs';
@@ -8,6 +9,7 @@ import { registerAuthRoutes } from './routes/auth.js';
 import { registerServerRoutes } from './routes/servers.js';
 import { registerHealthRoutes } from './routes/health.js';
 import { registerAuditRoutes } from './routes/audit.js';
+import { registerTerminalRoutes } from './routes/terminal.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -47,10 +49,12 @@ export async function createHttpServer(opts: HttpServerOptions = {}): Promise<Fa
   }
 
   // 路由注册
+  await app.register(fastifyWebsocket);
   registerHealthRoutes(app);
   registerAuthRoutes(app);
   registerServerRoutes(app);
   registerAuditRoutes(app);
+  registerTerminalRoutes(app);
 
   // 托管 Web UI 静态资源
   if (opts.serveWeb !== false) {

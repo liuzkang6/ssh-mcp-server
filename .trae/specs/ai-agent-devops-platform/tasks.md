@@ -269,18 +269,19 @@
 
 ## Phase 10 — Web 终端(2 天)
 
-- [ ] **Task 10.1**: 添加 `xterm` / `@xterm/addon-fit` / `@xterm/web-links` 到 web 子包
-- [ ] **Task 10.2**: 在 server 子包实现 `GET /ws/terminal/:serverId` WebSocket 端点(用 `@fastify/websocket`)
-  - [ ] SubTask 10.2.1: 握手时鉴权(JWT/cookie),校验 server 权限
-  - [ ] SubTask 10.2.2: 通过 `SSHSessionService` 拿/建 shell session
-  - [ ] SubTask 10.2.3: 双向桥接 stream ↔ ws
-  - [ ] SubTask 10.2.4: 处理 resize 帧,调 `stream.setWindow()`
-  - [ ] SubTask 10.2.5: 写 audit(开始/结束 session)
-- [ ] **Task 10.3**: 在 web 子包实现 `<Terminal>` 组件(xterm.js + FitAddon + WebSocket client)
-- [ ] **Task 10.4**: 把 `<Terminal>` 接到服务器详情页"终端" Tab
-- [ ] **Task 10.5**: 实现断线重连(指数退避,最大 30s)
-- [ ] **Task 10.6**: 实现"当前连接"列表(从 `GET /api/v1/servers/:id/active-sessions` 拉)
-- [ ] **Task 10.7**: server 侧 shell session 断线后保留 30s 宽限期
+- [x] **Task 10.1**: 添加 `xterm` / `@xterm/addon-fit` / `@xterm/web-links` 到 web 子包
+- [x] **Task 10.2**: 在 server 子包实现 `GET /ws/terminal/:serverId` WebSocket 端点(用 `@fastify/websocket`)
+  - [x] SubTask 10.2.1: 握手时鉴权(JWT/cookie),校验 server 权限 — 浏览器无法设自定义 header,改用 `?token=<jwt>` query string
+  - [x] SubTask 10.2.2: 通过 `SSHSessionService` 拿/建 shell session
+  - [x] SubTask 10.2.3: 双向桥接 stream ↔ ws(JSON 控制帧 + 文本流)
+  - [x] SubTask 10.2.4: 处理 resize 帧,调 `stream.setWindow()`
+  - [x] SubTask 10.2.5: 写 audit(开始/结束 session) — `terminal.open` / `terminal.close`
+- [x] **Task 10.3**: 在 web 子包实现 `<Terminal>` 组件(xterm.js + FitAddon + WebSocket client) — `src/components/Terminal.tsx`
+- [x] **Task 10.4**: 把 `<Terminal>` 接到服务器详情页"终端" Tab
+- [x] **Task 10.5**: 实现断线重连(指数退避,1s→2s→4s→8s→16s→30s 封顶)
+- [x] **Task 10.6**: 实现"当前连接"列表(从 `GET /api/v1/servers/:id/active-sessions` 拉)— 状态 Tab 已有
+- [x] **Task 10.7**: server 侧 shell session 断线后保留 30s 宽限期 — `SSHConnectionPool.releaseWithGrace` + `draining` Map
+  - 集成测试:`test-p10-ws.mjs` 验证 good WS 收到 JSON error 帧后 1011 关闭,bad WS 无 token 直接 1006 拒掉
 
 **Task Dependencies**:
 - Task 10.1 独立

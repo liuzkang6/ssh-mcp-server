@@ -272,14 +272,20 @@ export class SSHSessionService {
   /**
    * shell 长连接(给 Web 终端 / Phase 10 用)。
    * `acquire` 完成后,`entry.shellStream` 已就绪;返回的 `ShellHandle.close` 负责释放。
+   *
+   * Phase 10.7: close() 默认走 30s 宽限期(同 key 的后续 shell() 会在宽限期内"复活"
+   * 同一个 entry,复用 client + shellStream)。如需立即关,传 `graceMs=0`。
    */
   async shell(ctx: {
     operatorId: string;
     serverId: string;
     cols?: number;
     rows?: number;
+    /** Phase 10.7: 覆盖默认 30s 宽限期;0 表示立即释放 */
+    graceMs?: number;
   }): Promise<ShellHandle> {
     const { operatorId, serverId } = ctx;
+    const graceMs = ctx.graceMs;
     // cols/rows 在本阶段仅做参数透传占位,真正用 setWindow 是在 Phase 10 Web 终端
     void ctx.cols;
     void ctx.rows;
@@ -302,7 +308,14 @@ export class SSHSessionService {
     const releaseOnce = async () => {
       if (released) return;
       released = true;
-      await getPool().release(`${operatorId}:${serverId}:shell`);
+      if (graceMs === 0) {
+        await getPool().release(`${operatorId}:${serverId}:shell`);
+      } else {
+        await getPool().releaseWithGrace(
+          `${operatorId}:${serverId}:shell`,
+          graceMs,
+        );
+      }
     };
 
     return {

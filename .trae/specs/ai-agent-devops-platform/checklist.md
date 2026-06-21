@@ -73,7 +73,7 @@
 - [x] `/` 仪表盘显示统计卡片(机器总数/今日操作数) — `web/src/pages/Dashboard.tsx`(最近操作列表待补,Phase 9.9)
 - [x] `/servers` 列表支持新建/编辑/删除(对话框表单) — `web/src/pages/Servers.tsx`
 - [x] `/servers` 列表支持 group/tag 过滤 — `web/src/pages/Servers.tsx` 顶部加 Input.Search + 2 个 Select,后端 `ListQuery` 走 query string
-- [~] `/servers/:id` 详情页有 5 个 Tab(终端/命令/文件/状态/审计) — **部分**:Tab 框架存在,内容待补(Phase 9.11 + Phase 10)
+- [~] `/servers/:id` 详情页有 5 个 Tab(终端/命令/文件/状态/审计) — **部分**:5 个 Tab 框架在,内容按 phase 补(命令/文件=Phase 9.11,状态=已含 active-sessions,审计=既有)
 - [x] 401 响应自动跳登录页 — `web/src/api/client.ts` 401 拦截
 
 ## Web 终端
@@ -102,7 +102,7 @@
 
 ## 审计
 
-- [x] 所有 MCP tool / API 端点 / WebSocket 调用执行后写 `audit_logs` — 8 个 MCP 工具 + 5 个 HTTP 路由均已写 audit(7 个 API 路由验证,WebSocket 留给 Phase 10)
+- [x] 所有 MCP tool / API 端点 / WebSocket 调用执行后写 `audit_logs` — 8 个 MCP 工具 + 5 个 HTTP 路由 + WebSocket 终端均已写 audit(`terminal.open` / `terminal.close`)
 - [x] `output` 字段超过 10KB 被截断 — `AuditService.write` 调 `sanitizeAndTruncate(..., 10 * 1024)`
 - [x] `error_message` 包含 `password=secret` 入库时变 `password=***` — `src/security/sanitize.ts` 正则
 - [x] `error_message` 包含 `BEGIN PRIVATE KEY` 入库时过滤掉 — `src/security/sanitize.ts` PEM 正则
@@ -159,7 +159,7 @@
 - **4 个旧 MCP 工具改造** = 0% ❌(Phase 6.5)
 - **SSH 连接池拆分** = 0% ❌(Phase 5.5)
 - **Sessions 表写入** = 0% ❌(Phase 5.6)
-- **Web 终端** = 0% ❌(Phase 10)
+- **Web 终端** = 100% ✅(测试除外)
 - **monorepo** = 0% ❌(Phase 7)
 - **CLI 22+ 子命令** = 0% ❌(Phase 8)
 - **E2E + 文档** = 0% ❌(Phase 13)
