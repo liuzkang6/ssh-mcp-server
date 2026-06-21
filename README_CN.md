@@ -4,6 +4,35 @@
 
 [English Document](README.md) | 中文文档
 
+> ## 🆕 v2.0 — AI Agent 增强的 DevOps 中台
+>
+> v1 是个 NPX 即跑的 SSH MCP 工具;**v2 在保留所有 v1 能力的同时**,把它升级成了带 **Web UI / REST API / RBAC / 审计 / Docker 一键部署** 的 DevOps 中台,让 AI Agent 和人类管理员都能在受控环境里操作成百上千台服务器。
+>
+> **核心能力**
+>
+> - 🖥️ **Web UI** — Vite + React 18 + Ant Design 5,6 个页面(仪表盘 / 服务器列表 / 详情 6 Tab / 登录 / 用户管理 / 审计)
+> - 🌐 **Web 终端** — 浏览器内 xterm.js,`/ws/terminal/:id?token=...` 桥接 SSH shell,指数退避自动重连,30s 复用宽限期
+> - 🔌 **REST API 13 端点** — 鉴权 / 服务器 CRUD / exec / upload / download / active-sessions / audit / health
+> - 🛠️ **MCP 8 工具** — `execute-command` / `upload` / `download` / `list-servers` + 4 个新增 (`get-server-status` / `batch-execute-command` / `search-files` / `query-audit-logs`)
+> - 💻 **CLI 22+ 子命令** — `ssh-mcp-cli server/exec/batch/scp/terminal/...`,三格式输出 `table|json|text`
+> - 🔒 **安全** — AES-256-GCM 凭证加密 / JWT + API Key 鉴权 / RBAC (admin/read/write + server 白名单) / 全量审计
+> - 🐳 **Docker** — `docker compose up -d` 一键起,详见 [docs/deploy.md](docs/deploy.md)
+>
+> **快速开始(Docker)**
+>
+> ```bash
+> git clone https://github.com/classfang/ssh-mcp-server.git
+> cd ssh-mcp-server && git checkout refactor/monorepo
+> cp .env.example .env
+> # 编辑 .env,填入 ENCRYPTION_KEY (openssl rand -base64 32) 和 JWT_SECRET
+> docker compose up -d
+> # 浏览器打开 http://localhost:3000,默认 admin / admin123
+> ```
+>
+> 完整文档:[CHANGELOG.md](CHANGELOG.md) · [docs/deploy.md](docs/deploy.md)
+>
+> ---
+
 ## 📝 项目介绍
 
 ssh-mcp-server 是一个桥接工具，可以让 AI 助手等支持 MCP 协议的应用通过标准化接口执行远程 SSH 命令。这使得 AI 助手能够安全地操作远程服务器，执行命令并获取结果，而无需直接暴露 SSH 凭据给 AI 模型。

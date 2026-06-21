@@ -335,9 +335,9 @@
 - [ ] **Task 13.1**: 添加 Playwright,写 E2E 测试:登录 → 创建服务器 → 列表 → 执行命令
 - [ ] **Task 13.2**: 写 E2E 测试:Agent API Key 调 `/api/v1/servers/:name/exec` 成功
 - [ ] **Task 13.3**: 写 E2E 测试:RBAC 拒绝越权访问
-- [ ] **Task 13.4**: 更新根 README,把"使用说明"替换为"DevOps 中台使用说明"
-- [ ] **Task 13.5**: 写 CHANGELOG.md 记录 v2.0 大改
-- [ ] **Task 13.6**: 写 Docker 部署文档(README 或 docs/deploy.md)
+- [x] **Task 13.4**: 更新根 README,把"使用说明"替换为"DevOps 中台使用说明" — `README.md` + `README_CN.md` 顶部加 v2.0 章节(核心能力 + Docker 快速开始 + 链接到 CHANGELOG/deploy.md),原 v1 MCP 用法完整保留
+- [x] **Task 13.5**: 写 CHANGELOG.md 记录 v2.0 大改 — `CHANGELOG.md` Keep-a-Changelog 格式,详细列:架构变化 / 8 MCP 工具 / 13 REST 端点 / Web UI / Web 终端 / CLI 22 子命令 / Docker 部署 / SSH 加固 / 安全 / 测试 / 文档 / 破坏性变更 / 从 v1 迁移
+- [x] **Task 13.6**: 写 Docker 部署文档(README 或 docs/deploy.md) — `docs/deploy.md` 10 节:前置要求 / 快速开始 / 镜像构建 / 访问登录 / 数据持久化 / 升级 / 备份恢复 / 监控日志 / 生产加固 / 常见问题
 - [ ] **Task 13.7**: 跑通现有 7 个旧测试文件,确认未被破坏
 
 **Task Dependencies**:

@@ -116,6 +116,12 @@
 - [x] 健康检查失败 3 次后容器标记 unhealthy — Dockerfile `HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 CMD wget -q --spider ... || exit 1`,验证 wget 失败时返回 4(`|| exit 1` 保底 1),Docker 连续 3 次计失败后转 unhealthy
 - [x] 容器内 MCP 仍能通过 `npx ssh-mcp-server --help` 工作 — `--help` 输出完整,涵盖所有 dev 中台 + legacy CLI flag
 
+## 文档
+
+- [x] 根 README + README_CN 顶部加 v2.0 DevOps 中台章节 — `README.md` / `README_CN.md` 保留 v1 MCP 用法,顶部加 callout 介绍 Web UI / REST API / Web 终端 / CLI / Docker 快速开始
+- [x] `CHANGELOG.md` 记录 v2.0 大改 — Keep-a-Changelog 格式,13 节详细列架构变化 / 8 MCP / 13 REST / Web UI / 终端 / CLI / Docker / SSH 加固 / 安全 / 测试 / 文档 / 破坏性 / 迁移
+- [x] Docker 部署文档 — `docs/deploy.md` 10 节,涵盖前置 / 快速开始 / 镜像构建 / 访问登录 / 数据持久化 / 升级 / 备份恢复 / 监控日志 / 生产加固 / FAQ
+
 ## 测试覆盖
 
 - [x] 加密模块单元测试 — `test/security/crypto.test.js`
