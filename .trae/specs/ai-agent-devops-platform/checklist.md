@@ -72,7 +72,7 @@
 - [x] 登录成功后 JWT 存 localStorage,后续请求自动带 Authorization header — `web/src/api/client.ts` `setToken` + `getToken`
 - [x] `/` 仪表盘显示统计卡片(机器总数/今日操作数) — `web/src/pages/Dashboard.tsx`(最近操作列表待补,Phase 9.9)
 - [x] `/servers` 列表支持新建/编辑/删除(对话框表单) — `web/src/pages/Servers.tsx`
-- [~] `/servers` 列表支持 group/tag 过滤 — **部分**:后端 `ListQuery` 支持,前端 UI 待补(Phase 9.10)
+- [x] `/servers` 列表支持 group/tag 过滤 — `web/src/pages/Servers.tsx` 顶部加 Input.Search + 2 个 Select,后端 `ListQuery` 走 query string
 - [~] `/servers/:id` 详情页有 5 个 Tab(终端/命令/文件/状态/审计) — **部分**:Tab 框架存在,内容待补(Phase 9.11 + Phase 10)
 - [x] 401 响应自动跳登录页 — `web/src/api/client.ts` 401 拦截
 

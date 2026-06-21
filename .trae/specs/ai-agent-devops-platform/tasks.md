@@ -250,7 +250,7 @@
 - [x] **Task 9.7**: 实现服务器详情 `/servers/:id` 的"命令" Tab 框架 — `web/src/pages/ServerDetail.tsx`
 - [x] **Task 9.8**: 实现 401 拦截器(自动跳登录)— `web/src/api/client.ts`
 - [ ] **Task 9.9**: 补 Dashboard"最近操作"列表(调 `/api/v1/audit-logs?limit=10`)
-- [ ] **Task 9.10**: 补 Servers 列表的 group/tag/name 过滤
+- [x] **Task 9.10**: 补 Servers 列表的 group/tag/name 过滤
 - [ ] **Task 9.11**: 补 ServerDetail 5 Tab 框架(终端/命令/文件/状态/审计)
 
 **Task Dependencies**:
