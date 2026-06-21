@@ -1,27 +1,41 @@
 /**
- * @platform/cli — DevOps 中台 CLI 入口
+ * @opsgate/cli — opsgate DevOps 中台 CLI 入口
  *
  * 22+ 子命令,基于 Commander.js 派发;通过 HTTP API 与 server 通信。
- * 配置文件:~/.config/ssh-mcp-cli/config.json(chmod 600)
+ * 配置文件:~/.config/opsgate/config.json(chmod 600)
+ *
+ * 环境变量:
+ *   OPSGATE_API_KEY     — API key(优先级最高,覆盖 config 文件)
+ *   OPSGATE_API_BASE    — API base URL
  */
 
-import { Command, Option } from "commander";
+import { Command } from "commander";
 import chalk from "chalk";
 import Table from "cli-table3";
 import { readFileSync, writeFileSync, existsSync, mkdirSync, chmodSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { spawn } from "node:child_process";
+import { createInterface } from "node:readline/promises";
+
+// ============== 常量 ==============
+
+const APP_NAME = "opsgate";
+const CONFIG_DIR = join(homedir(), ".config", APP_NAME);
+const CONFIG_FILE = join(CONFIG_DIR, "config.json");
+const VERSION = "2.0.0";
+
+const ENV_API_KEY = "OPSGATE_API_KEY";
+const ENV_API_BASE = "OPSGATE_API_BASE";
+const DEFAULT_API_BASE = "http://localhost:3000";
 
 // ============== Config ==============
-
-const CONFIG_DIR = join(homedir(), ".config", "ssh-mcp-cli");
-const CONFIG_FILE = join(CONFIG_DIR, "config.json");
 
 export interface CliConfig {
   apiKey?: string;
   apiBase?: string;
   username?: string;
+  output?: OutputFormat;
 }
 
 function loadConfig(): CliConfig {
@@ -172,13 +186,16 @@ function filterServers(
 
 // ============== Subcommand implementations ==============
 
-async function cmdLogin(opts: { apiBase?: string; apiKey?: string }): Promise<void> {
+async function cmdLogin(opts: {
+  apiBase?: string;
+  apiKey?: string;
+  username?: string;
+}): Promise<void> {
   const cfg = loadConfig();
   if (opts.apiBase) cfg.apiBase = opts.apiBase;
-  if (opts.apiKey) cfg.apiKey = opts.apiKey;
-  if (!cfg.apiBase) cfg.apiBase = "http://localhost:3000";
+  if (opts.username) cfg.username = opts.username;
+  if (!cfg.apiBase) cfg.apiBase = DEFAULT_API_BASE;
   if (!opts.apiKey) {
-    const { createInterface } = await import("node:readline/promises");
     const rl = createInterface({ input: process.stdin, output: process.stdout });
     try {
       const k = await rl.question(`API key (sk-...): `);
@@ -189,15 +206,48 @@ async function cmdLogin(opts: { apiBase?: string; apiKey?: string }): Promise<vo
   }
   if (!cfg.apiKey) throw new Error("API key required");
   saveConfig(cfg);
-  console.log(chalk.green("Saved to"), CONFIG_FILE);
+  console.log(chalk.green("✓ Saved to"), CONFIG_FILE);
 }
 
 function cmdLogout(): void {
   const cfg = loadConfig();
   cfg.apiKey = undefined;
   cfg.apiBase = undefined;
+  cfg.username = undefined;
   saveConfig(cfg);
-  console.log(chalk.green("Cleared local config"));
+  console.log(chalk.green("✓ Cleared local config"));
+}
+
+function cmdConfigShow(): void {
+  const cfg = loadConfig();
+  console.log(chalk.cyan("Config file:"), CONFIG_FILE);
+  console.log(chalk.cyan("apiBase:  "), cfg.apiBase ?? chalk.gray(`(unset, default ${DEFAULT_API_BASE})`));
+  console.log(chalk.cyan("apiKey:   "), cfg.apiKey ? `${cfg.apiKey.slice(0, 8)}…` : chalk.gray("(unset)"));
+  console.log(chalk.cyan("username: "), cfg.username ?? chalk.gray("(unset)"));
+  console.log(chalk.cyan("output:   "), cfg.output ?? chalk.gray("(unset)"));
+}
+
+async function cmdConfigSet(key: string, value: string): Promise<void> {
+  const allowed = ["apiKey", "apiBase", "username", "output"];
+  if (!allowed.includes(key)) {
+    throw new Error(`Unknown config key: ${key}. Allowed: ${allowed.join(", ")}`);
+  }
+  const cfg = loadConfig();
+  (cfg as Record<string, unknown>)[key] = value;
+  saveConfig(cfg);
+  console.log(chalk.green(`✓ Set ${key}`));
+}
+
+async function cmdConfigUnset(key: string): Promise<void> {
+  const cfg = loadConfig();
+  delete (cfg as Record<string, unknown>)[key];
+  saveConfig(cfg);
+  console.log(chalk.green(`✓ Unset ${key}`));
+}
+
+async function cmdPing(ctx: RequestCtx, format: OutputFormat): Promise<void> {
+  const data = await request("GET", "/api/v1/health", undefined, ctx);
+  printData(data, format);
 }
 
 async function cmdWhoami(ctx: RequestCtx, format: OutputFormat): Promise<void> {
@@ -266,11 +316,20 @@ async function cmdServerUpdate(
 
 async function cmdServerDelete(ctx: RequestCtx, id: string): Promise<void> {
   await request("DELETE", `/api/v1/servers/${encodeURIComponent(id)}`, undefined, ctx);
-  console.log(chalk.green("Deleted"), id);
+  console.log(chalk.green("✓ Deleted"), id);
 }
 
 async function cmdAgentList(ctx: RequestCtx, format: OutputFormat): Promise<void> {
   const data = await request("GET", "/api/v1/operators", undefined, ctx);
+  printData(data, format);
+}
+
+async function cmdAgentGet(
+  ctx: RequestCtx,
+  format: OutputFormat,
+  name: string,
+): Promise<void> {
+  const data = await request("GET", `/api/v1/operators/${encodeURIComponent(name)}`, undefined, ctx);
   printData(data, format);
 }
 
@@ -302,6 +361,11 @@ async function cmdAgentRotateKey(
     ctx,
   );
   printData(data, format);
+}
+
+async function cmdAgentDelete(ctx: RequestCtx, name: string): Promise<void> {
+  await request("DELETE", `/api/v1/operators/${encodeURIComponent(name)}`, undefined, ctx);
+  console.log(chalk.green("✓ Deleted"), name);
 }
 
 async function cmdAuditList(
@@ -348,14 +412,30 @@ async function cmdExec(
 async function cmdBatch(
   ctx: RequestCtx,
   format: OutputFormat,
-  args: { command: string; group?: string; tag?: string; parallel: number; failFast: boolean },
+  args: { command: string; group?: string; tag?: string; parallel: number; failFast: boolean; dryRun: boolean },
 ): Promise<void> {
   const servers = await listServers(ctx);
-  const targets = filterServers(servers, { ...(args.group !== undefined ? { group: args.group } : {}), ...(args.tag !== undefined ? { tag: args.tag } : {}) });
+  const targets = filterServers(servers, {
+    ...(args.group !== undefined ? { group: args.group } : {}),
+    ...(args.tag !== undefined ? { tag: args.tag } : {}),
+  });
   if (targets.length === 0) throw new Error("No servers matched --group/--tag");
+  if (args.dryRun) {
+    console.log(chalk.yellow("DRY-RUN: would execute on:"));
+    for (const s of targets) {
+      console.log(`  ${chalk.cyan(s.name)} (${s.id}) — ${chalk.gray(args.command)}`);
+    }
+    return;
+  }
   console.log(chalk.gray(`Running on ${targets.length} server(s), parallel=${args.parallel}`));
 
-  const results: { server: string; exitCode: number; durationMs: number; stdout: string; error?: string }[] = [];
+  const results: {
+    server: string;
+    exitCode: number;
+    durationMs: number;
+    stdout: string;
+    error?: string;
+  }[] = [];
   const queue = [...targets];
   const inflight: Promise<void>[] = [];
 
@@ -368,10 +448,21 @@ async function cmdBatch(
         { command: args.command },
         ctx,
       )) as { exitCode: number; stdout: string; durationMs: number };
-      results.push({ server: s.name, exitCode: r.exitCode, durationMs: r.durationMs, stdout: r.stdout });
+      results.push({
+        server: s.name,
+        exitCode: r.exitCode,
+        durationMs: r.durationMs,
+        stdout: r.stdout,
+      });
       if (args.failFast && r.exitCode !== 0) throw new Error(`${s.name} exit ${r.exitCode}`);
     } catch (e) {
-      results.push({ server: s.name, exitCode: -1, durationMs: Date.now() - start, stdout: "", error: (e as Error).message });
+      results.push({
+        server: s.name,
+        exitCode: -1,
+        durationMs: Date.now() - start,
+        stdout: "",
+        error: (e as Error).message,
+      });
       if (args.failFast) throw e;
     }
   };
@@ -428,7 +519,7 @@ function cmdTerminal(ctx: RequestCtx, server: string): void {
         ? "start"
         : "xdg-open";
   spawn(opener, [url], { stdio: "ignore", detached: true });
-  console.log(chalk.green("Opening"), url);
+  console.log(chalk.green("✓ Opening"), url);
 }
 
 async function cmdStatus(
@@ -436,8 +527,6 @@ async function cmdStatus(
   format: OutputFormat,
   server: string,
 ): Promise<void> {
-  // /api/v1/servers/:id/status — 该端点不存在时让 server 通过 audit/health 暴露
-  // MVP:从 /api/v1/servers/:id/active-sessions + /api/v1/health 拼装
   const active = (await request(
     "GET",
     `/api/v1/servers/${encodeURIComponent(server)}/active-sessions`,
@@ -453,14 +542,19 @@ async function cmdSearch(
   format: OutputFormat,
   args: { servers: string[]; pattern: string; path?: string; parallel: number },
 ): Promise<void> {
-  // 走 /api/v1/servers/:id/exec + grep,跨 server 聚合
   const list = await listServers(ctx);
   const targets = args.servers.flatMap((ref) => filterServers(list, { id: ref }));
   if (targets.length === 0) throw new Error("No servers matched");
   const basePath = args.path ?? "/";
   const cmd = `grep -rn -- '${args.pattern.replace(/'/g, "'\\''")}' ${basePath}`;
 
-  const results: { server: string; exitCode: number; durationMs: number; stdout: string; error?: string }[] = [];
+  const results: {
+    server: string;
+    exitCode: number;
+    durationMs: number;
+    stdout: string;
+    error?: string;
+  }[] = [];
   const queue = [...targets];
   const inflight: Promise<void>[] = [];
   const runOne = async (s: ServerListItem) => {
@@ -472,18 +566,97 @@ async function cmdSearch(
         { command: cmd, timeoutMs: 30000 },
         ctx,
       )) as { exitCode: number; stdout: string; durationMs: number };
-      results.push({ server: s.name, exitCode: r.exitCode, durationMs: r.durationMs, stdout: r.stdout });
+      results.push({
+        server: s.name,
+        exitCode: r.exitCode,
+        durationMs: r.durationMs,
+        stdout: r.stdout,
+      });
     } catch (e) {
-      results.push({ server: s.name, exitCode: -1, durationMs: Date.now() - start, stdout: "", error: (e as Error).message });
+      results.push({
+        server: s.name,
+        exitCode: -1,
+        durationMs: Date.now() - start,
+        stdout: "",
+        error: (e as Error).message,
+      });
     }
   };
   for (let i = 0; i < args.parallel; i++) {
-    inflight.push((async () => {
-      while (queue.length) await runOne(queue.shift()!);
-    })());
+    inflight.push(
+      (async () => {
+        while (queue.length) await runOne(queue.shift()!);
+      })(),
+    );
   }
   await Promise.all(inflight);
   printData(results, format);
+}
+
+// ============== Shell completion ==============
+
+function bashCompletion(): string {
+  return `# opsgate bash completion
+_opsgate_completion() {
+  local cur prev words cword
+  _init_completion || return
+  if [[ "\${cur}" == -* ]]; then
+    COMPREPLY=($(compgen -W "\${opts}" -- "\${cur}"))
+    return
+  fi
+  if [[ "\${cword}" -eq 1 ]]; then
+    COMPREPLY=($(compgen -W "login logout whoami version config ping server agent audit exec batch scp terminal status search help" -- "\${cur}"))
+  fi
+}
+complete -F _opsgate_completion opsgate
+`;
+}
+
+function zshCompletion(): string {
+  return `# opsgate zsh completion
+#compdef opsgate
+_opsgate() {
+  local -a commands
+  commands=(
+    'login:Save API key to config'
+    'logout:Clear local config'
+    'whoami:Show current operator'
+    'version:Print opsgate version'
+    'config:Manage local config'
+    'ping:Health check'
+    'server:Server management'
+    'agent:Operator management'
+    'audit:Audit log query'
+    'exec:Execute command on single server'
+    'batch:Execute command on multiple servers'
+    'scp:File transfer'
+    'terminal:Open Web terminal in browser'
+    'status:Get server status'
+    'search:Search files on multiple servers'
+  )
+  _describe 'command' commands
+}
+compdef _opsgate opsgate
+`;
+}
+
+function fishCompletion(): string {
+  return `# opsgate fish completion
+complete -c opsgate -n "__fish_use_subcommand" -a "login logout whoami version config ping server agent audit exec batch scp terminal status search"
+complete -c opsgate -a "version" -d "Print version"
+`;
+}
+
+function cmdCompletion(shell: string): void {
+  let script = "";
+  if (shell === "bash") script = bashCompletion();
+  else if (shell === "zsh") script = zshCompletion();
+  else if (shell === "fish") script = fishCompletion();
+  else {
+    console.error(chalk.red(`Unknown shell: ${shell}. Supported: bash, zsh, fish`));
+    process.exit(1);
+  }
+  console.log(script);
 }
 
 // ============== Program ==============
@@ -491,27 +664,28 @@ async function cmdSearch(
 export async function main(argv: string[]): Promise<void> {
   const program = new Command();
   program
-    .name("ssh-mcp-cli")
-    .description("DevOps 中台 CLI — 22+ 子命令,调 HTTP API 与 server 通信")
-    .version("2.0.0")
-    .option("--format <fmt>", "输出格式 (table|json|text)", "text")
-    .option("--api-key <key>", "覆盖 config 中的 API key")
-    .option("--api-base <url>", "覆盖 config 中的 API base")
+    .name(APP_NAME)
+    .description(`${APP_NAME} — DevOps 中台 CLI(22+ 子命令,调 HTTP API 与 server 通信)`)
+    .version(VERSION)
+    .option("-f, --format <fmt>", "输出格式 (table|json|text)", "text")
+    .option("--api-key <key>", `覆盖 config 中的 API key(也可用 $${ENV_API_KEY})`)
+    .option("--api-base <url>", `覆盖 config 中的 API base(也可用 $${ENV_API_BASE})`)
     .showHelpAfterError();
 
-  // login
+  // 顶层命令
   program
     .command("login")
-    .description("保存 API key 到 ~/.config/ssh-mcp-cli/config.json")
+    .description("保存 API key 到 ~/.config/opsgate/config.json")
     .option("--api-base <url>", "API base URL")
     .option("--api-key <key>", "API key(非交互)")
+    .option("--username <name>", "用户名(仅作备注)")
     .action(async (opts) => {
       await cmdLogin(opts);
     });
 
   program
     .command("logout")
-    .description("清除本地 config")
+    .description("清除本地 config(api key / api base / username)")
     .action(cmdLogout);
 
   program
@@ -522,16 +696,56 @@ export async function main(argv: string[]): Promise<void> {
       await cmdWhoami(ctx, formatOf(program));
     });
 
+  program
+    .command("version")
+    .description(`打印 ${APP_NAME} 版本`)
+    .action(() => {
+      console.log(`${APP_NAME} v${VERSION}`);
+    });
+
+  program
+    .command("ping")
+    .description("健康检查(GET /api/v1/health)")
+    .action(async () => {
+      const ctx = makeCtx(program);
+      await cmdPing(ctx, formatOf(program));
+    });
+
+  // config 子命令
+  const config = program.command("config").description("管理本地 config 文件");
+  config
+    .command("show")
+    .description("显示当前 config(apiBase/apiKey/username/output)")
+    .action(cmdConfigShow);
+  config
+    .command("set <key> <value>")
+    .description("设置 config 项(apiKey|apiBase|username|output)")
+    .action(cmdConfigSet);
+  config
+    .command("unset <key>")
+    .description("删除 config 项")
+    .action(cmdConfigUnset);
+
+  // completion
+  program
+    .command("completion <shell>")
+    .description("输出 shell completion 脚本(bash|zsh|fish)")
+    .action(cmdCompletion);
+
   // server
   const server = program.command("server").description("服务器管理");
   server
     .command("list")
+    .alias("ls")
     .description("列出服务器")
     .option("--group <g>", "按分组过滤")
     .option("--tag <t>", "按 tag 过滤")
     .action(async (opts) => {
       const ctx = makeCtx(program);
-      await cmdServerList(ctx, formatOf(program), { ...(opts.group !== undefined ? { group: opts.group } : {}), ...(opts.tag !== undefined ? { tag: opts.tag } : {}) });
+      await cmdServerList(ctx, formatOf(program), {
+        ...(opts.group !== undefined ? { group: opts.group } : {}),
+        ...(opts.tag !== undefined ? { tag: opts.tag } : {}),
+      });
     });
   server
     .command("get <id>")
@@ -573,20 +787,29 @@ export async function main(argv: string[]): Promise<void> {
     });
   server
     .command("delete <id>")
+    .alias("rm")
     .description("删除服务器")
     .action(async (id: string) => {
       const ctx = makeCtx(program);
       await cmdServerDelete(ctx, id);
     });
 
-  // agent
+  // agent / operator
   const agent = program.command("agent").description("Operator 管理(human/agent)");
   agent
     .command("list")
+    .alias("ls")
     .description("列出 operator")
     .action(async () => {
       const ctx = makeCtx(program);
       await cmdAgentList(ctx, formatOf(program));
+    });
+  agent
+    .command("get <name>")
+    .description("获取单个 operator 详情")
+    .action(async (name: string) => {
+      const ctx = makeCtx(program);
+      await cmdAgentGet(ctx, formatOf(program), name);
     });
   agent
     .command("create")
@@ -606,10 +829,19 @@ export async function main(argv: string[]): Promise<void> {
       const ctx = makeCtx(program);
       await cmdAgentRotateKey(ctx, formatOf(program), name);
     });
+  agent
+    .command("delete <name>")
+    .alias("rm")
+    .description("删除 operator")
+    .action(async (name: string) => {
+      const ctx = makeCtx(program);
+      await cmdAgentDelete(ctx, name);
+    });
 
   // audit
   program
     .command("audit list")
+    .alias("audit ls")
     .description("查询审计日志")
     .option("--serverId <id>")
     .option("--operatorId <id>")
@@ -645,6 +877,7 @@ export async function main(argv: string[]): Promise<void> {
     .option("--tag <t>", "按 tag 过滤")
     .option("--parallel <n>", "并发数", "5")
     .option("--fail-fast", "任一失败立即终止")
+    .option("--dry-run", "只列出目标 server,不真执行")
     .action(async (commandParts: string[], opts) => {
       const ctx = makeCtx(program);
       await cmdBatch(ctx, formatOf(program), {
@@ -653,6 +886,7 @@ export async function main(argv: string[]): Promise<void> {
         ...(opts.tag !== undefined ? { tag: opts.tag } : {}),
         parallel: Number(opts.parallel),
         failFast: !!opts.failFast,
+        dryRun: !!opts.dryRun,
       });
     });
 
@@ -674,7 +908,8 @@ export async function main(argv: string[]): Promise<void> {
 
   program
     .command("terminal <server>")
-    .description("唤起浏览器打开 Web 终端(Phase 10 之后才完全可用)")
+    .alias("ssh")
+    .description("唤起浏览器打开 Web 终端(/servers/:id 的终端 Tab)")
     .action((server: string) => {
       const ctx = makeCtx(program);
       cmdTerminal(ctx, server);
@@ -704,17 +939,16 @@ export async function main(argv: string[]): Promise<void> {
       });
     });
 
-  // 兼容老 entry:如果第一个 token 是 "search"/"batch"/"scp" 等,commander 也能处理
-  // (前面已注册同名 command)
-
   await program.parseAsync(argv);
 }
 
 function makeCtx(program: Command): RequestCtx {
   const opts = program.opts<{ apiKey?: string; apiBase?: string; format?: string }>();
   const cfg = loadConfig();
-  const apiKey = process.env.SSH_MCP_API_KEY || opts.apiKey || cfg.apiKey || "";
-  const apiBase = process.env.SSH_MCP_API_BASE || opts.apiBase || cfg.apiBase || "http://localhost:3000";
+  const apiKey =
+    process.env[ENV_API_KEY] || opts.apiKey || cfg.apiKey || "";
+  const apiBase =
+    process.env[ENV_API_BASE] || opts.apiBase || cfg.apiBase || DEFAULT_API_BASE;
   return { apiBase, apiKey };
 }
 

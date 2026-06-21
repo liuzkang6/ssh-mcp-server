@@ -1,19 +1,22 @@
 {
-  "name": "@fangjunjie/ssh-mcp-server",
-  "version": "1.8.3",
-  "description": "SSH-based MCP Server monorepo (基于 SSH 的 MCP 服务器 monorepo)",
+  "name": "opsgate",
+  "version": "2.0.0",
+  "description": "opsgate — AI Agent 增强的 DevOps 中台(SSH MCP + Web UI + REST API + RBAC + 审计 + Docker)",
   "type": "module",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/classfang/ssh-mcp-server.git"
+    "url": "git+https://github.com/liuzkang6/opsgate.git"
   },
   "bugs": {
-    "url": "https://github.com/classfang/ssh-mcp-server/issues"
+    "url": "https://github.com/liuzkang6/opsgate/issues"
   },
-  "homepage": "https://github.com/classfang/ssh-mcp-server#readme",
+  "homepage": "https://github.com/liuzkang6/opsgate#readme",
   "workspaces": [
     "packages/*"
   ],
+  "bin": {
+    "opsgate": "./packages/cli/dist/index.js"
+  },
   "scripts": {
     "test": "node scripts/run-tests.js",
     "test:watch": "node --test --watch test/**/*.test.js",
@@ -24,15 +27,18 @@
     "db:seed": "node --import tsx/esm scripts/seed.ts"
   },
   "keywords": [
+    "opsgate",
     "ssh",
     "mcp",
     "server",
     "cli",
     "devops",
     "ai-agent",
-    "monorepo"
+    "monorepo",
+    "rbac",
+    "audit"
   ],
-  "author": "Junki",
+  "author": "liuzkang6",
   "license": "ISC",
   "devDependencies": {
     "drizzle-kit": "^0.30.0",

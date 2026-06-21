@@ -1,4 +1,4 @@
-# docker-compose.yml — 单容器 MVP 配置
+# docker-compose.yml — opsgate 单容器配置
 # 用法:
 #   1. 复制 .env.example 为 .env 并填入密钥
 #   2. docker compose up -d
@@ -7,18 +7,18 @@
 version: '3.8'
 
 services:
-  platform:
+  opsgate:
     build:
       context: .
       dockerfile: Dockerfile
-    image: ai-devops-platform:latest
-    container_name: ai-devops-platform
+    image: opsgate:latest
+    container_name: opsgate
     restart: unless-stopped
     ports:
       - "${PORT:-3000}:3000"
     volumes:
-      - platform-data:/app/data
-      - platform-logs:/app/logs
+      - opsgate-data:/app/data
+      - opsgate-logs:/app/logs
     environment:
       # 必填:32 字节 base64 编码的主加密密钥
       # 生成方式: openssl rand -base64 32
@@ -48,7 +48,7 @@ services:
         max-file: "3"
 
 volumes:
-  platform-data:
-    name: ai-devops-platform-data
-  platform-logs:
-    name: ai-devops-platform-logs
+  opsgate-data:
+    name: opsgate-data
+  opsgate-logs:
+    name: opsgate-logs

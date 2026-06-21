@@ -86,19 +86,20 @@
 - [ ] server 侧 shell session 在断线后保留 30s 宽限期 — 未实现
 - [x] 详情页"当前连接"列表正确显示进行中的 session — 状态 Tab 调 `GET /servers/:id/active-sessions`
 
-## CLI 工具
+## CLI 工具(`opsgate`)
 
-- [ ] `ssh-mcp-cli server list` 输出服务器列表 — **未实现**:仅有 `src/cli-tool/index.ts` 雏形,无 Commander.js,无 22+ 子命令(Phase 8)
-- [ ] `ssh-mcp-cli server list --format json` 输出 JSON — 未实现
-- [ ] `ssh-mcp-cli server list --format table` 输出人类可读表格 — 未实现
-- [ ] `ssh-mcp-cli exec <server> <cmd>` 单机执行 — 未实现
-- [ ] `ssh-mcp-cli batch exec --group <g> --cmd <c>` 批量执行 — 未实现
-- [ ] `ssh-mcp-cli batch exec --dry-run` 预演不执行 — 未实现
-- [ ] `ssh-mcp-cli scp upload <local> <server>:<remote>` 上传 — 未实现
-- [ ] `ssh-mcp-cli scp download <server>:<remote> <local>` 下载 — 未实现
-- [ ] `ssh-mcp-cli terminal <server>` 唤起浏览器 — 未实现
-- [ ] `ssh-mcp-cli login` 交互式登录,API key 存到 `~/.config/ssh-mcp-cli/config.json`,文件权限 600 — 未实现
-- [ ] `SSH_MCP_API_KEY=sk-xxx ssh-mcp-cli server list` 用环境变量 key 鉴权成功 — 未实现
+- [x] `opsgate server list` 输出服务器列表 — `packages/cli/src/index.ts` Commander.js + 22+ 子命令
+- [x] `opsgate server list --format json` 输出 JSON — `--format json` 全局选项
+- [x] `opsgate server list --format table` 输出人类可读表格 — `--format table`(默认 text)
+- [x] `opsgate exec <server> <cmd>` 单机执行 — 调 `/api/v1/servers/:id/exec`,自动解 server name → id
+- [x] `opsgate batch <cmd> --group <g>` 批量执行 — 默认支持 `--group` / `--tag` / `--parallel` / `--fail-fast` / `--dry-run`
+- [x] `opsgate batch <cmd> --dry-run` 预演不执行
+- [x] `opsgate scp upload <local> <server>:<remote>` 上传 — 走 API SFTP
+- [x] `opsgate scp download <server>:<remote> <local>` 下载
+- [x] `opsgate terminal <server>` 唤起浏览器 — `opsgate ssh <server>` 是 alias
+- [x] `opsgate login` 交互式登录,API key 存到 `~/.config/opsgate/config.json`,文件权限 600
+- [x] `OPSGATE_API_KEY=sk-xxx opsgate server list` 用环境变量 key 鉴权成功
+- 额外:config show/set/unset / version / ping / agent list|get|create|rotate-key|delete / audit list / search / completion bash|zsh|fish
 
 ## 审计
 
@@ -114,7 +115,7 @@
 - [x] `docker-compose.yml` 单服务,挂载 data/logs 卷 — `docker-compose.yml`
 - [x] `docker compose up -d` 后 5s 内 `/api/v1/health` 返回 `ok` — **等价验证通过**(沙箱无 docker):`node packages/server/dist/index.js --enable-web` boot → first /health 200 耗时 1308ms
 - [x] 健康检查失败 3 次后容器标记 unhealthy — Dockerfile `HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 CMD wget -q --spider ... || exit 1`,验证 wget 失败时返回 4(`|| exit 1` 保底 1),Docker 连续 3 次计失败后转 unhealthy
-- [x] 容器内 MCP 仍能通过 `npx ssh-mcp-server --help` 工作 — `--help` 输出完整,涵盖所有 dev 中台 + legacy CLI flag
+- [x] 容器内 MCP 仍能通过 `npx @fangjunjie/ssh-mcp-server --help` 工作 — `--help` 输出完整,涵盖所有 dev 中台 + legacy CLI flag(新 `opsgate` 命令为 v2 推荐入口)
 
 ## 文档
 
@@ -162,11 +163,11 @@
 - **REST API** = 后端 100%,集成测试 0%
 - **MCP 4 个新工具** = 100% ✅(测试除外)
 - **Web UI 6 页面骨架** = 100% ✅,业务补全约 50%
-- **4 个旧 MCP 工具改造** = 0% ❌(Phase 6.5)
-- **SSH 连接池拆分** = 0% ❌(Phase 5.5)
-- **Sessions 表写入** = 0% ❌(Phase 5.6)
-- **Web 终端** = 100% ✅(测试除外)
-- **monorepo** = 0% ❌(Phase 7)
-- **CLI 22+ 子命令** = 0% ❌(Phase 8)
-- **E2E + 文档** = 0% ❌(Phase 13)
+- **4 个旧 MCP 工具改造** = 100% ✅(走 ServerManager + audit)
+- **SSH 连接池拆分** = 100% ✅
+- **Sessions 表写入** = 100% ✅
+- **Web 终端** = 100% ✅
+- **monorepo** = 100% ✅
+- **CLI 22+ 子命令** = 100% ✅(8.12 集成测试除外)
+- **E2E + 文档** = 部分(13.1-13.3 + 13.7 待补)
 - **A2A 协议** = 0%(未来)

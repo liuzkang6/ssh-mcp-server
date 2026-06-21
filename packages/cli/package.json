@@ -1,10 +1,10 @@
 {
-  "name": "@platform/cli",
+  "name": "@opsgate/cli",
   "version": "2.0.0",
-  "description": "DevOps 中台 CLI(22+ 子命令,基于 Commander.js + chalk + cli-table3)",
+  "description": "opsgate CLI — 22+ 子命令,基于 Commander.js + chalk + cli-table3",
   "type": "module",
   "bin": {
-    "ssh-mcp-cli": "./dist/index.js"
+    "opsgate": "./dist/index.js"
   },
   "main": "./dist/index.js",
   "scripts": {

@@ -81,14 +81,11 @@ docker compose up -d
 
 首次会触发多阶段构建(~2-3 分钟),之后秒起。
 
-### 2.5 验证
-
-```bash
-# 1) 看容器状态
+### 1) 看容器状态
 docker compose ps
 
 # 2) 看 healthcheck
-docker inspect --format='{{json .State.Health}}' ai-devops-platform | jq
+docker inspect --format='{{json .State.Health}}' opsgate | jq
 
 # 3) 直接打 health 端点
 curl http://localhost:3000/api/v1/health
@@ -112,10 +109,10 @@ curl http://localhost:3000/api/v1/health
 
 ```bash
 # 加构建参数 / 换 tag
-docker build -t my-registry.example.com/ai-devops:2.0.0 .
+docker build -t my-registry.example.com/opsgate:2.0.0 .
 
 # 推私有 registry
-docker push my-registry.example.com/ai-devops:2.0.0
+docker push my-registry.example.com/opsgate:2.0.0
 ```
 
 如果改了 `docker-compose.yml` 的 `image:` 字段指向私有仓库,启动时直接拉现成镜像,跳过构建。
@@ -182,14 +179,14 @@ curl -X POST http://localhost:3000/api/v1/servers/dev-server/exec \
 
 ### 5.1 挂载点
 
-`docker-compose.yml` 定义了两个 named volume:
+`docker-compose.yml` 定义了两个 named命名 volume:
 
 | Volume | 容器内路径 | 存什么 |
 |--------|------------|--------|
-| `ai-devops-platform-data` | `/app/data` | SQLite DB + 上传/下载缓存 |
-| `ai-devops-platform-logs` | `/app/logs` | 应用日志 |
+| `opsgate-data` | `/app/data` | SQLite DB + 上传/下载缓存 |
+| `opsgate-logs` | `/app/logs` | 应用日志 |
 
-容器删了数据还在。要彻底清,`docker volume rm ai-devops-platform-data`。
+容器删了数据还在。要彻底清,`docker volume rm opsgate-data`。
 
 ### 5.2 改 host bind mount
 
@@ -234,15 +231,15 @@ docker run --rm \
 ### 7.2 恢复
 
 ```bash
-docker compose stop platform
+docker compose stop opsgate
 docker run --rm \
-  -v ai-devops-platform-data:/data \
+  -v opsgate-data:/data \
   -v $(pwd):/backup \
   alpine:3.20 sh -c "
     apk add --no-cache sqlite
     cp /backup/platform-20260621.db /data/platform.db
   "
-docker compose start platform
+docker compose start opsgate
 ```
 
 > 💡 DB 备份包含 **加密后的** SSH 凭证,只要 `ENCRYPTION_KEY` 没丢,恢复到新环境时密钥不丢就能解。
@@ -266,7 +263,7 @@ healthcheck:
 
 ```bash
 docker compose ps        # STATUS 列显示 (healthy) / (unhealthy)
-docker inspect --format='{{.State.Health.Status}}' ai-devops-platform
+docker inspect --format='{{.State.Health.Status}}' opsgate
 ```
 
 ### 8.2 日志
@@ -279,7 +276,7 @@ docker compose logs -f platform
 docker compose logs --tail=100 platform
 
 # 应用日志(在 host)
-ls -lah /var/lib/docker/volumes/ai-devops-platform-logs/_data/
+ls -lah /var/lib/docker/volumes/opsgate-logs/_data/
 ```
 
 `docker-compose.yml` 配了 json-file 驱动,单文件最大 10 MB,保留 3 个。
@@ -324,9 +321,9 @@ docker compose logs platform | tail -50
 
 ### Q3: 怎么进容器调试
 ```bash
-docker compose exec platform sh
+docker compose exec opsgate sh
 # 在容器内:
-node packages/server/dist/index.js --help
+opsgate-server --help
 ls -la /app/data/
 sqlite3 /app/data/platform.db ".tables"
 ```
@@ -342,9 +339,20 @@ sqlite3 /app/data/platform.db ".tables"
 ### Q6: 想换 SQLite 到 Postgres
 v2.0 暂不支持,DB 层用了 Drizzle ORM,理论上能换 driver,但需要重写 migrate。当前推荐用 SQLite,WAL 模式够支撑中等规模(几千台 server 元数据)。
 
+### Q7: `opsgate` CLI 在哪装?
+v2 起,**CLI 跟 server 一起打包在 Docker 镜像里**(挂载到容器 PATH 即可调用)。本机装:
+```bash
+npm install -g @opsgate/cli
+# 或 dev:
+npm link packages/cli
+# 配置:
+opsgate login    # 提示输入 API key
+opsgate ping     # 验证连得通 server
+```
+
 ---
 
 **更多信息**:
 - [README.md](../README.md) — 项目总览 + v1 MCP 用法
 - [CHANGELOG.md](../CHANGELOG.md) — 版本变更
-- `.trae/specs/ai-agent-devops-platform/` — 完整 spec / tasks / checklist
+- `.trae/specs/ai-agent-devops-platform/` — 完整 spec / tasks / checklist(命名沿用旧名,内部仍然记录 v2 任务)

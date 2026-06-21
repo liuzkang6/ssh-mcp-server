@@ -10,7 +10,7 @@
   - [x] SubTask 0.1.2: 阶段二 runner 仅复制 build 产物,使用 tini 启动
   - [x] SubTask 0.1.3: EXPOSE 3000,CMD `node build/index.js --enable-web`
 - [x] **Task 0.2**: 编写 docker-compose.yml,挂载 data/logs 卷,设置 ENCRYPTION_KEY / JWT_SECRET 环境变量
-- [x] **Task 0.3**: 验证 `docker compose up -d` 后 `/api/v1/health` 在 5s 内返回 ok,`npx ssh-mcp-server --help` 在容器内仍能输出帮助
+- [x] **Task 0.3**: 验证 `docker compose up -d` 后 `/api/v1/health` 在 5s 内返回 ok,`npx @fangjunjie/ssh-mcp-server --help`(或 `npx opsgate --help`)在容器内仍能输出帮助
   - 注:沙箱无 docker 运行时,采用等价验证:用 `node packages/server/dist/index.js --enable-web`(与 Dockerfile CMD 一致)+ `wget --spider` 模拟 HEALTHCHECK
   - 实际测得:boot → first /health 200 耗时 **1308ms**(远小于 5s);`--help` 输出完整;`wget --spider` 失败时退出码 4(非 0)
 - [x] **Task 0.4**: docker healthcheck 失败 3 次标记 unhealthy(`HEALTHCHECK` + `curl -fsS`)
@@ -208,11 +208,11 @@
 
 ## Phase 7 — monorepo 改造(1 天)
 
-- [ ] **Task 7.1**: 在仓库根创建 `package.json`,声明 `"workspaces": ["packages/*"]`
-- [ ] **Task 7.2**: 把现有 `src/` 移到 `packages/server/src/`,并创建 `packages/server/package.json`(`name: "@platform/server"`)
-- [ ] **Task 7.3**: 创建 `packages/cli/package.json`(`name: "@platform/cli"`,`bin: { "ssh-mcp-cli": "build/index.js" }`)和 `tsconfig.json`
-- [ ] **Task 7.4**: 创建 `packages/web/package.json`、`vite.config.ts`、`tsconfig.json`、React 入口 `index.html`
-- [ ] **Task 7.5**: 验证根目录 `npm install` + `npm run build` 同时构建三个子包
+- [x] **Task 7.1**: 在仓库根创建 `package.json`,声明 `"workspaces": ["packages/*"]`
+- [x] **Task 7.2**: 把现有 `src/` 移到 `packages/server/src/`,并创建 `packages/server/package.json`(`name: "@opsgate/server"`)
+- [x] **Task 7.3**: 创建 `packages/cli/package.json`(`name: "@opsgate/cli"`,`bin: { "opsgate": "dist/index.js" }`)和 `tsconfig.json`
+- [x] **Task 7.4**: 创建 `packages/web/package.json`、`vite.config.ts`、`tsconfig.json`、React 入口 `index.html`
+- [x] **Task 7.5**: 验证根目录 `npm install` + `npm run build` 同时构建三个子包
 
 **Task Dependencies**:
 - Task 7.2 依赖 Task 7.1
@@ -222,18 +222,18 @@
 
 ## Phase 8 — CLI 工具(3 天)
 
-- [ ] **Task 8.1**: 添加 `commander` / `chalk` / `cli-table3` 到 `packages/cli`
-- [ ] **Task 8.2**: 实现 `packages/cli/src/index.ts` 入口和全局选项解析
-- [ ] **Task 8.3**: 实现 `packages/cli/src/api/client.ts` HTTP 客户端(fetch 封装,自动注入 Bearer)
-- [ ] **Task 8.4**: 实现 `packages/cli/src/config/loader.ts`(从 `~/.config/ssh-mcp-cli/config.json` 读 api-key,chmod 600)
-- [ ] **Task 8.5**: 实现 server 子命令(list / get / create / update / delete)
-- [ ] **Task 8.6**: 实现 exec 子命令(单机执行)
-- [ ] **Task 8.7**: 实现 batch exec 子命令(批量执行,带 --dry-run)
-- [ ] **Task 8.8**: 实现 scp 子命令(upload / download)
-- [ ] **Task 8.9**: 实现 terminal 子命令(唤起浏览器)
-- [ ] **Task 8.10**: 实现 status / agent / audit / whoami / login / logout 子命令
-- [ ] **Task 8.11**: 实现三种输出格式(table / json / text)的格式化器
-- [ ] **Task 8.12**: 写 CLI 集成测试(mock HTTP server)
+- [x] **Task 8.1**: 添加 `commander` / `chalk` / `cli-table3` 到 `packages/cli`
+- [x] **Task 8.2**: 实现 `packages/cli/src/index.ts` 入口和全局选项解析(`--format` / `--api-key` / `--api-base`)
+- [x] **Task 8.3**: 实现 `packages/cli/src/api/client.ts` HTTP 客户端(fetch 封装,自动注入 Bearer)
+- [x] **Task 8.4**: 实现 `packages/cli/src/config/loader.ts`(从 `~/.config/opsgate/config.json` 读 api-key,chmod 600)
+- [x] **Task 8.5**: 实现 server 子命令(list / get / create / update / delete) + ls/rm alias
+- [x] **Task 8.6**: 实现 exec 子命令(单机执行,自动解 server 名 → id)
+- [x] **Task 8.7**: 实现 batch exec 子命令(批量执行,带 --dry-run / --parallel / --fail-fast)
+- [x] **Task 8.8**: 实现 scp 子命令(upload / download,自动解 server 名 → id)
+- [x] **Task 8.9**: 实现 terminal 子命令(唤起浏览器,ssh 是 alias)
+- [x] **Task 8.10**: 实现 status / agent / audit / whoami / login / logout / config / version / ping / completion 子命令
+- [x] **Task 8.11**: 实现三种输出格式(table / json / text)的格式化器(`--format` 全局)
+- [ ] **Task 8.12**: 写 CLI 集成测试(mock HTTP server) — 待补
 
 **Task Dependencies**:
 - Task 8.2 依赖 Task 8.1

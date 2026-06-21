@@ -17,6 +17,6 @@ function readPackageVersion(): string {
  * MCP Server configuration
  */
 export const SERVER_CONFIG = {
-  name: "ssh-mcp-server",
+  name: "opsgate",
   version: readPackageVersion(),
 };

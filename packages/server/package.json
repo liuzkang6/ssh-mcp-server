@@ -1,11 +1,11 @@
 {
-  "name": "@platform/server",
+  "name": "@opsgate/server",
   "version": "2.0.0",
-  "description": "SSH-based MCP Server (基于 SSH 的 MCP 服务器)",
+  "description": "opsgate server — HTTP API + MCP server + SSH 连接池 + 审计 (后端核心)",
   "main": "dist/index.js",
   "type": "module",
   "bin": {
-    "ssh-mcp-server": "dist/index.js"
+    "opsgate-server": "dist/index.js"
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",

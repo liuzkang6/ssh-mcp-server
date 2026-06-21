@@ -72,7 +72,7 @@ describe('CLI info flags', () => {
     const result = runCli(['--help']);
 
     assert.strictEqual(result.status, 0);
-    assert.match(result.stdout, /Usage: ssh-mcp-server/);
+    assert.match(result.stdout, /Usage: opsgate-server/);
     for (const option of expectedHelpOptions) {
       assert.ok(
         result.stdout.includes(option),
@@ -87,7 +87,7 @@ describe('CLI info flags', () => {
     const result = runCli(['--config-file', missingConfigPath, '--help']);
 
     assert.strictEqual(result.status, 0);
-    assert.match(result.stdout, /Usage: ssh-mcp-server/);
+    assert.match(result.stdout, /Usage: opsgate-server/);
     assert.doesNotMatch(result.stderr, /Config file not found/);
     assert.doesNotMatch(result.stderr, /Unknown option/);
   });

@@ -9,7 +9,7 @@ import { startHttpServer } from "./http/server.js";
 import { getServerManager } from "./services/server-manager.js";
 import { getOperatorManager } from "./services/operator-manager.js";
 
-const HELP_TEXT = `Usage: ssh-mcp-server [options]
+const HELP_TEXT = `Usage: opsgate-server [options]
 
 DevOps 中台模式(MVP):
   启动时:加载 ENCRYPTION_KEY → 跑 DB migration → 启 HTTP(3000)+MCP(stdio)

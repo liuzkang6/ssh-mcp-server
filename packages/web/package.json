@@ -1,8 +1,9 @@
 {
-  "name": "ssh-mcp-web",
+  "name": "@opsgate/web",
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "description": "opsgate Web UI — Vite + React 18 + Ant Design 5",
   "scripts": {
     "dev": "vite",
     "build": "vite build",

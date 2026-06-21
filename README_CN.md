@@ -14,15 +14,15 @@
 > - 🌐 **Web 终端** — 浏览器内 xterm.js,`/ws/terminal/:id?token=...` 桥接 SSH shell,指数退避自动重连,30s 复用宽限期
 > - 🔌 **REST API 13 端点** — 鉴权 / 服务器 CRUD / exec / upload / download / active-sessions / audit / health
 > - 🛠️ **MCP 8 工具** — `execute-command` / `upload` / `download` / `list-servers` + 4 个新增 (`get-server-status` / `batch-execute-command` / `search-files` / `query-audit-logs`)
-> - 💻 **CLI 22+ 子命令** — `ssh-mcp-cli server/exec/batch/scp/terminal/...`,三格式输出 `table|json|text`
+> - 💻 **CLI 22+ 子命令** — `opsgate server/exec/batch/scp/terminal/...`,三格式输出 `table|json|text`
 > - 🔒 **安全** — AES-256-GCM 凭证加密 / JWT + API Key 鉴权 / RBAC (admin/read/write + server 白名单) / 全量审计
 > - 🐳 **Docker** — `docker compose up -d` 一键起,详见 [docs/deploy.md](docs/deploy.md)
 >
 > **快速开始(Docker)**
 >
 > ```bash
-> git clone https://github.com/classfang/ssh-mcp-server.git
-> cd ssh-mcp-server && git checkout refactor/monorepo
+> git clone https://github.com/liuzkang6/opsgate.git
+> cd opsgate
 > cp .env.example .env
 > # 编辑 .env,填入 ENCRYPTION_KEY (openssl rand -base64 32) 和 JWT_SECRET
 > docker compose up -d
@@ -55,9 +55,9 @@ ssh-mcp-server 是一个桥接工具，可以让 AI 助手等支持 MCP 协议�
 
 ## 📦 开源仓库
 
-GitHub：[https://github.com/classfang/ssh-mcp-server](https://github.com/classfang/ssh-mcp-server)
+GitHub：[https://github.com/liuzkang6/opsgate](https://github.com/liuzkang6/opsgate)
 
-NPM: [https://www.npmjs.com/package/@fangjunjie/ssh-mcp-server](https://www.npmjs.com/package/@fangjunjie/ssh-mcp-server)
+NPM: [https://www.npmjs.com/package/@fangjunjie/ssh-mcp-server](https://www.npmjs.com/package/@fangjunjie/ssh-mcp-server)(v1 包名,v2 内部已升级为 `@opsgate/server`)
 
 ## 🛠️ 工具列表
 
@@ -614,4 +614,4 @@ npx @fangjunjie/ssh-mcp-server \
 
 ## 🌟 Star 历史
 
-[![Star History Chart](https://api.star-history.com/svg?repos=classfang/ssh-mcp-server&type=date&legend=top-left)](https://www.star-history.com/#classfang/ssh-mcp-server&type=date&legend=top-left)
+[![Star History Chart](https://api.star-history.com/svg?repos=liuzkang6/opsgate&type=date&legend=top-left)](https://www.star-history.com/#liuzkang6/opsgate&type=date&legend=top-left)

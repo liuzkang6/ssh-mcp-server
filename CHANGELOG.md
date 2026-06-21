@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [2.0.0] - 2026-06-21
 
+### 🔁 Project Rebrand — `ssh-mcp-server` → **`opsgate`**
+
+> 本项目从原 fork 的 `ssh-mcp-server` 升级为自有产品 **`opsgate`**,以反映 v2 已从单 NPX 工具蜕变为完整 DevOps 中台。
+>
+> - 包名:`@platform/*` → `@opsgate/*`(@opsgate/server / @opsgate/cli / @opsgate/web)
+> - CLI bin:`ssh-mcp-cli` → `opsgate`
+> - 配置文件:`~/.config/ssh-mcp-cli/` → `~/.config/opsgate/`
+> - 环境变量:`SSH_MCP_*` → `OPSGATE_*`(保留旧名作 deprecation 兼容,3 个大版本后移除)
+> - Docker 镜像:`ai-devops-platform:2.0.0` → `opsgate:2.0.0`
+> - GitHub 仓库:`https://github.com/liuzkang6/opsgate`
+>
+> v1 包名 `@fangjunjie/ssh-mcp-server` 仍可继续使用(NPX 安装 / MCP 集成不破坏)。
+
 ### 🆕 Added — v2.0: AI Agent 增强的 DevOps 中台
 
 > v1 是一个 NPX 即跑的 SSH MCP 工具;v2 在保留 v1 所有能力的同时,把它升级成了一个带 Web UI / REST API / RBAC / 审计 / Docker 一键部署的 **DevOps 中台**,让 AI Agent 和人类管理员都能在受控的环境下操作成百上千台服务器。
@@ -46,15 +59,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - 指数退避自动重连(1s → 2s → 4s → 8s → 16s → 30s 封顶)
   - server 侧 shell session 30s 宽限期(`SSHConnectionPool.releaseWithGrace` + `draining` Map + `tryReuseDraining`)
 
-#### CLI 工具(22+ 子命令)
-- `ssh-mcp-cli server list/get/create/update/delete`
-- `ssh-mcp-cli exec <server> <cmd>` — 单机执行
-- `ssh-mcp-cli batch exec <server1>,<server2> -- <cmd>` — 批量执行,带 `--dry-run`
-- `ssh-mcp-cli scp upload/download <local> <remote>`
-- `ssh-mcp-cli terminal <server>` — 唤起浏览器
-- `ssh-mcp-cli status / agent / audit / whoami / login / logout`
-- 三种输出格式 `--format table|json|text`(默认 table)
-- API Key 存 `~/.config/ssh-mcp-cli/config.json`,文件权限 600
+#### CLI 工具(22+ 子命令,统一 `opsgate` 命令)
+- `opsgate login / logout / whoami / version / config / ping`
+- `opsgate server list/get/create/update/delete`
+- `opsgate exec <server> <cmd>` — 单机执行(`opsgate ssh <server>` 是 `terminal` 的别名)
+- `opsgate batch <cmd>` — 按 `--group` / `--tag` 批量执行,带 `--parallel` / `--fail-fast` / `--dry-run`
+- `opsgate scp upload/download <local> <server>:<remote>` — 走 API SFTP
+- `opsgate terminal <server>` — 唤起浏览器
+- `opsgate status <server>` — 拼装 /active-sessions + /health
+- `opsgate search <servers...> --pattern <p>` — 多机 grep
+- `opsgate agent list/get/create/rotate-key/delete` — Operator 管理
+- `opsgate audit list` — 审计查询(支持 serverId/operatorId/action/status/sinceMinutes/limit)
+- `opsgate completion bash|zsh|fish` — shell completion 脚本
+- 三种输出格式 `--format table|json|text`(默认 text,带颜色),亦可 `opsgate config set output json` 全局默认
+- API Key 存 `~/.config/opsgate/config.json`,文件权限 600
 
 #### 部署
 - **Dockerfile** 多阶段构建:builder 阶段 `npm install + npm run build`;runner 阶段只复制 `dist/ + web-dist + node_modules`,基于 `node:22-alpine`,`tini` 启动
@@ -95,12 +113,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `.trae/specs/ai-agent-devops-platform/` — 完整 spec + tasks + checklist(32 个 Phase 0-14)
 
 ### ⚠️ Breaking Changes(相对 v1)
-- CLI 参数 `--ssh` 的旧"逗号分隔"格式标记为 deprecated,推荐用 `--config-file` JSON
-- npm 包名 `@fangjunjie/ssh-mcp-server` 仍是单一入口,内部走 monorepo workspaces
+- **CLI 命令**:`ssh-mcp-cli` → `opsgate`,**老命令不可用**;可通过 `opsgate` 内置帮助平滑过渡
+- **配置文件**:`~/.config/ssh-mcp-cli/config.json` → `~/.config/opsgate/config.json`;老 config 不会被自动迁移
+- **环境变量**:`SSH_MCP_API_KEY` / `SSH_MCP_API_BASE` → `OPSGATE_API_KEY` / `OPSGATE_API_BASE`(旧名仍兼容)
+- **包名**:`@platform/cli` → `@opsgate/cli`;`@platform/server` → `@opsgate/server`
+- **Docker 镜像**:`ai-devops-platform:*` → `opsgate:*`
+- npm 旧入口 `@fangjunjie/ssh-mcp-server` 仍可继续使用(NPX 安装 / MCP 集成不破坏)
 - DB schema 是新增的,首次启动自动 migrate,**不会**读取 v1 的 `~/.ssh/config` 以外的数据
 
 ### 🔄 Migration from v1
 v1 用户无需任何改动,`npx -y @fangjunjie/ssh-mcp-server` 仍然按原方式工作。新功能(Web UI / API / Docker / CLI 22 子命令 / 审计)都是叠加的,不会破坏现有 MCP 集成。
+
+如果想用 v2 的 CLI,把 `ssh-mcp-cli` 替换成 `opsgate`,把 `~/.config/ssh-mcp-cli/` 改名成 `~/.config/opsgate/` 即可。
 
 ## [1.8.3] - Earlier
 

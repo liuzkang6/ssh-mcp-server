@@ -2,7 +2,7 @@
 
 ## Why
 
-现有 `ssh-mcp-server` 是个纯 MCP 工具,只支持 AI Agent 通过 stdio 调用,缺乏:Web UI、CLI、多用户隔离、审计、凭证加密、批量操作。要把它升级为一个**支持人和 AI Agent 并行操作**的 SSH 机器管理中台,使 DevOps 团队既能直接用 Web 管控机器,又能让 AI Agent 安全高效地代为执行。
+现有 `ssh-mcp-server`(v1)是个纯 MCP 工具,只支持 AI Agent 通过 stdio 调用,缺乏:Web UI、CLI、多用户隔离、审计、凭证加密、批量操作。要把它升级(并重命名为 **opsgate**)为一个**支持人和 AI Agent 并行操作**的 SSH 机器管理中台,使 DevOps 团队既能直接用 Web 管控机器,又能让 AI Agent 安全高效地代为执行。
 
 ## What Changes
 
@@ -14,7 +14,7 @@
 - **新增** Per-Operator 隔离的 `SSHConnectionPool`(原 `SSHConnectionManager` 拆分)
 - **新增** Web UI(React + Vite + Ant Design),6 个核心页面
 - **新增** Web 终端(xterm.js + WebSocket,基于现有 shell 模式)
-- **新增** CLI 工具 monorepo 子包(`@platform/cli`,22+ 子命令,Commander.js)
+- **新增** CLI 工具 monorepo 子包(`@opsgate/cli`,22+ 子命令,Commander.js;CLI bin 为 `opsgate`)
 - **新增** 4 个 MCP 工具: `get_server_status` / `batch_execute_command` / `search_files` / `query_audit_logs`
 - **改造** 现有 4 个 MCP 工具对接新数据源和审计
 - **改造** 项目结构为 monorepo:`packages/server` / `packages/cli` / `packages/web`
@@ -183,14 +183,14 @@
 
 ### Requirement: CLI 工具
 
-系统 SHALL 在 monorepo 子包 `packages/cli` 提供 `ssh-mcp-cli` 命令,基于 Commander.js,支持 22+ 子命令(server / exec / batch / scp / terminal / status / agent / audit / whoami / login),三种输出格式(`table` / `json` / `text`)。
+系统 SHALL 在 monorepo 子包 `packages/cli` 提供 `opsgate` 命令,基于 Commander.js,支持 22+ 子命令(server / exec / batch / scp / terminal / status / agent / audit / whoami / login / config / version / ping / completion),三种输出格式(`table` / `json` / `text`)。
 
 #### Scenario: CLI 调用与 MCP tool 1:1 对应
-- **WHEN** 调用 `ssh-mcp-cli batch exec --tag web --cmd "uptime" --format json`
+- **WHEN** 调用 `opsgate batch <cmd> --tag web --format json`
 - **THEN** 等价于 MCP 调 `batch_execute_command(servers=[...从tag=web过滤], cmdString="uptime", parallel=5)`,返回 JSON 输出
 
 #### Scenario: Agent 通过环境变量鉴权
-- **WHEN** 设置 `SSH_MCP_API_KEY=sk-xxx` 后调用 `ssh-mcp-cli server list`
+- **WHEN** 设置 `OPSGATE_API_KEY=sk-xxx` 后调用 `opsgate server list`
 - **THEN** CLI 自动用该 key 鉴权,不读 config 文件
 
 ### Requirement: 审计与脱敏

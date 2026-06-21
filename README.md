@@ -1,12 +1,15 @@
-# 🔐 ssh-mcp-server
+# 🛡️ opsgate
+
+> v2.0 已从原 fork 的 **ssh-mcp-server** 升级为 **opsgate** — AI Agent 增强的 DevOps 中台。
+> 顶部 v2.0 章节介绍了新能力(下文所有 `@fangjunjie/ssh-mcp-server` 仍是 v1 的可用包名,继续可用)。
 
 ![NPM Version](https://img.shields.io/npm/v/%40fangjunjie%2Fssh-mcp-server?label=%40fangjunjie%2Fssh-mcp-server)
-![GitHub forks](https://img.shields.io/github/forks/classfang/ssh-mcp-server)
-![GitHub Repo stars](https://img.shields.io/github/stars/classfang/ssh-mcp-server)
-![GitHub Issues or Pull Requests](https://img.shields.io/github/issues/classfang/ssh-mcp-server)
-![GitHub Issues or Pull Requests](https://img.shields.io/github/issues-closed/classfang/ssh-mcp-server)
-![GitHub Issues or Pull Requests](https://img.shields.io/github/issues-pr/classfang/ssh-mcp-server)
-![GitHub Issues or Pull Requests](https://img.shields.io/github/issues-pr-closed/classfang/ssh-mcp-server)
+![GitHub forks](https://img.shields.io/github/forks/liuzkang6/opsgate)
+![GitHub Repo stars](https://img.shields.io/github/stars/liuzkang6/opsgate)
+![GitHub Issues or Pull Requests](https://img.shields.io/github/issues/liuzkang6/opsgate)
+![GitHub Issues or Pull Requests](https://img.shields.io/github/issues-closed/liuzkang6/opsgate)
+![GitHub Issues or Pull Requests](https://img.shields.io/github/issues-pr/liuzkang6/opsgate)
+![GitHub Issues or Pull Requests](https://img.shields.io/github/issues-pr-closed/liuzkang6/opsgate)
 
 SSH-based MCP (Model Context Protocol) server that allows remote execution of SSH commands via the MCP protocol.
 
@@ -22,15 +25,15 @@ English Document | [中文文档](README_CN.md)
 > - 🌐 **Web 终端** — 浏览器内 xterm.js,`/ws/terminal/:id?token=...` 桥接 SSH shell,指数退避自动重连,30s 复用宽限期
 > - 🔌 **REST API 13 端点** — 鉴权 / 服务器 CRUD / exec / upload / download / active-sessions / audit / health
 > - 🛠️ **MCP 8 工具** — `execute-command` / `upload` / `download` / `list-servers` + 4 个新增 (`get-server-status` / `batch-execute-command` / `search-files` / `query-audit-logs`)
-> - 💻 **CLI 22+ 子命令** — `ssh-mcp-cli server/exec/batch/scp/terminal/...`,三格式输出 `table|json|text`
+> - 💻 **CLI 22+ 子命令** — `opsgate server/exec/batch/scp/terminal/...`,三格式输出 `table|json|text`
 > - 🔒 **安全** — AES-256-GCM 凭证加密 / JWT + API Key 鉴权 / RBAC (admin/read/write + server 白名单) / 全量审计
 > - 🐳 **Docker** — `docker compose up -d` 一键起,详见 [docs/deploy.md](docs/deploy.md)
 >
 > **快速开始(Docker)**
 >
 > ```bash
-> git clone https://github.com/classfang/ssh-mcp-server.git
-> cd ssh-mcp-server && git checkout refactor/monorepo
+> git clone https://github.com/liuzkang6/opsgate.git
+> cd opsgate
 > cp .env.example .env
 > # 编辑 .env,填入 ENCRYPTION_KEY (openssl rand -base64 32) 和 JWT_SECRET
 > docker compose up -d
@@ -63,9 +66,9 @@ Welcome to join wechat group:
 
 ## 📦 Open Source Repository
 
-GitHub: [https://github.com/classfang/ssh-mcp-server](https://github.com/classfang/ssh-mcp-server)
+GitHub: [https://github.com/liuzkang6/opsgate](https://github.com/liuzkang6/opsgate)
 
-NPM: [https://www.npmjs.com/package/@fangjunjie/ssh-mcp-server](https://www.npmjs.com/package/@fangjunjie/ssh-mcp-server)
+NPM: [https://www.npmjs.com/package/@fangjunjie/ssh-mcp-server](https://www.npmjs.com/package/@fangjunjie/ssh-mcp-server)(v1 包名,v2 内部已升级为 `@opsgate/server`)
 
 ## 🛠️ Tools List
 
@@ -612,4 +615,4 @@ This server provides powerful capabilities to execute commands and transfer file
 
 ## 🌟 Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=classfang/ssh-mcp-server&type=date&legend=top-left)](https://www.star-history.com/#classfang/ssh-mcp-server&type=date&legend=top-left)
+[![Star History Chart](https://api.star-history.com/svg?repos=liuzkang6/opsgate&type=date&legend=top-left)](https://www.star-history.com/#liuzkang6/opsgate&type=date&legend=top-left)

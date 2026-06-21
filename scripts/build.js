@@ -21,19 +21,19 @@ const webDistDir = join(rootDir, "web-dist");
 // 使用 root hoisted 的 tsc(workspace 模式下共享 node_modules)
 const tscBin = join(rootDir, "node_modules", ".bin", "tsc");
 
-// 1) Build server (@platform/server)
-console.log("Building server (@platform/server)...");
+// 1) Build server (@opsgate/server)
+console.log("Building server (@opsgate/server)...");
 execSync(`"${tscBin}" -p tsconfig.json`, { stdio: "inherit", cwd: serverDir });
 
-// 2) Build CLI (@platform/cli)
+// 2) Build CLI (@opsgate/cli)
 if (existsSync(join(cliDir, "tsconfig.json"))) {
-  console.log("Building CLI (@platform/cli)...");
+  console.log("Building CLI (@opsgate/cli)...");
   execSync(`"${tscBin}" -p tsconfig.json`, { stdio: "inherit", cwd: cliDir });
 }
 
 // 3) Build web (Vite)
 if (existsSync(join(webDir, "package.json"))) {
-  console.log("Building web (@platform/web)...");
+  console.log("Building web (@opsgate/web)...");
   execSync("npm run build", { stdio: "inherit", cwd: webDir });
 }
 
